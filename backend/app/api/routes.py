@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.core.security import get_current_user
 from app.db.session import test_connection
 
 router = APIRouter()
@@ -15,24 +16,20 @@ async def home():
 
 @router.get("/health")
 async def health():
-    return {
-        "status": "healthy",
-    }
+    return {"status": "healthy"}
 
 
 @router.get("/database")
 async def database():
+    test_connection()
+    return {"database": "connected"}
 
-    try:
-        test_connection()
 
-        return {
-            "database": "connected"
-        }
-
-    except Exception as e:
-
-        return {
-            "database": "failed",
-            "error": str(e)
-        }
+@router.get("/profile")
+async def profile(
+    current_user=Depends(get_current_user),
+):
+    return {
+        "message": "Authenticated successfully",
+        "user": current_user,
+    }
