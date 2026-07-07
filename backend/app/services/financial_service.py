@@ -1,14 +1,20 @@
 import math
+import logging
+from typing import Any
 
 import yfinance as yf
+
+
+logger = logging.getLogger(__name__)
 
 
 class FinancialService:
 
     @staticmethod
-    def safe_number(value, default=None):
+    def safe_number(value: Any, default=None):
         """
-        Convert Yahoo Finance values safely into JSON-compatible numbers.
+        Convert external financial values safely into
+        JSON-compatible numbers.
         """
 
         if value is None:
@@ -27,12 +33,17 @@ class FinancialService:
 
 
     @staticmethod
-    def get_first_available(info: dict, keys: list[str]):
+    def get_first_available(
+        info: dict,
+        keys: list[str],
+    ):
         """
-        Return the first valid value available from a list of Yahoo fields.
+        Return the first valid numeric value from the
+        provided financial-data fields.
         """
 
         for key in keys:
+
             value = FinancialService.safe_number(
                 info.get(key)
             )
@@ -44,16 +55,81 @@ class FinancialService:
 
 
     @staticmethod
+    def empty_financial_response(
+        symbol: str,
+        reason: str,
+    ):
+        """
+        Return a schema-compatible degraded response.
+
+        This allows the production scoring pipeline to continue
+        when the upstream financial-data provider is temporarily
+        unavailable or rate limited.
+        """
+
+        return {
+            "symbol": symbol.upper(),
+
+            "company_name": symbol.upper(),
+
+            "currency": "INR",
+
+            "valuation": {
+                "market_cap": None,
+                "pe_ratio": None,
+                "price_to_book": None,
+                "eps": None,
+                "book_value": None,
+            },
+
+            "profitability": {
+                "revenue": None,
+                "net_income": None,
+                "operating_margin": None,
+                "profit_margin": None,
+                "roe": None,
+                "roa": None,
+            },
+
+            "balance_sheet": {
+                "total_cash": None,
+                "total_debt": None,
+                "debt_to_equity": None,
+                "current_ratio": None,
+            },
+
+            "cash_flow": {
+                "operating_cash_flow": None,
+                "free_cash_flow": None,
+            },
+
+            "data_status": "DEGRADED",
+
+            "data_message": reason,
+        }
+
+
+    @staticmethod
     def get_financials(symbol: str):
 
+        normalized_symbol = symbol.strip().upper()
+
         try:
-            ticker = yf.Ticker(symbol)
+
+            ticker = yf.Ticker(normalized_symbol)
 
             info = ticker.info
 
             if not info:
-                raise ValueError(
-                    f"No financial information found for {symbol}"
+
+                logger.warning(
+                    "No financial information returned for %s",
+                    normalized_symbol,
+                )
+
+                return FinancialService.empty_financial_response(
+                    normalized_symbol,
+                    "Financial data is temporarily unavailable.",
                 )
 
 
@@ -63,7 +139,7 @@ class FinancialService:
 
             company_name = info.get(
                 "longName",
-                symbol.upper(),
+                normalized_symbol,
             )
 
             currency = info.get(
@@ -177,7 +253,7 @@ class FinancialService:
             # ----------------------------------
 
             return {
-                "symbol": symbol.upper(),
+                "symbol": normalized_symbol,
 
                 "company_name": company_name,
 
@@ -194,23 +270,39 @@ class FinancialService:
                 "profitability": {
                     "revenue": revenue,
                     "net_income": net_income,
+
                     "operating_margin": (
-                        round(operating_margin * 100, 2)
+                        round(
+                            operating_margin * 100,
+                            2,
+                        )
                         if operating_margin is not None
                         else None
                     ),
+
                     "profit_margin": (
-                        round(profit_margin * 100, 2)
+                        round(
+                            profit_margin * 100,
+                            2,
+                        )
                         if profit_margin is not None
                         else None
                     ),
+
                     "roe": (
-                        round(roe * 100, 2)
+                        round(
+                            roe * 100,
+                            2,
+                        )
                         if roe is not None
                         else None
                     ),
+
                     "roa": (
-                        round(roa * 100, 2)
+                        round(
+                            roa * 100,
+                            2,
+                        )
                         if roa is not None
                         else None
                     ),
@@ -224,12 +316,47 @@ class FinancialService:
                 },
 
                 "cash_flow": {
-                    "operating_cash_flow": operating_cash_flow,
-                    "free_cash_flow": free_cash_flow,
+                    "operating_cash_flow":
+                        operating_cash_flow,
+
+                    "free_cash_flow":
+                        free_cash_flow,
                 },
+
+                "data_status": "AVAILABLE",
+
+                "data_message": None,
             }
 
-        except Exception as e:
-            raise ValueError(
-                f"Unable to fetch financial data for {symbol}: {str(e)}"
+
+        except Exception as error:
+
+            error_message = str(error)
+
+            logger.warning(
+                "Financial data unavailable for %s: %s",
+                normalized_symbol,
+                error_message,
+            )
+
+            if (
+                "Too Many Requests" in error_message
+                or "Rate limited" in error_message
+                or "429" in error_message
+            ):
+
+                reason = (
+                    "Financial data provider is temporarily "
+                    "rate limited."
+                )
+
+            else:
+
+                reason = (
+                    "Financial data is temporarily unavailable."
+                )
+
+            return FinancialService.empty_financial_response(
+                normalized_symbol,
+                reason,
             )
