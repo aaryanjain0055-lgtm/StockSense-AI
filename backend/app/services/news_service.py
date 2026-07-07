@@ -1,6 +1,10 @@
 from datetime import datetime, timezone
+import logging
 
 import yfinance as yf
+
+
+logger = logging.getLogger(__name__)
 
 
 class NewsService:
@@ -22,21 +26,44 @@ class NewsService:
 
 
     @staticmethod
+    def empty_news_response(
+        symbol: str,
+        reason: str,
+    ):
+        """
+        Return a schema-compatible degraded response when
+        upstream news data is unavailable.
+        """
+
+        return {
+            "symbol": symbol.upper(),
+            "count": 0,
+            "articles": [],
+            "data_status": "DEGRADED",
+            "data_message": reason,
+        }
+
+
+    @staticmethod
     def get_stock_news(
         symbol: str,
         limit: int = 10,
     ):
 
+        normalized_symbol = symbol.strip().upper()
+
         try:
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(normalized_symbol)
 
             raw_news = ticker.news
 
             if not raw_news:
                 return {
-                    "symbol": symbol.upper(),
+                    "symbol": normalized_symbol,
                     "count": 0,
                     "articles": [],
+                    "data_status": "AVAILABLE",
+                    "data_message": None,
                 }
 
 
@@ -45,13 +72,20 @@ class NewsService:
 
             for item in raw_news:
 
-                # Newer yfinance versions may wrap
-                # article information inside "content".
+                if not isinstance(item, dict):
+                    continue
+
+
+                # Newer yfinance versions may wrap article
+                # information inside "content".
 
                 content = item.get(
                     "content",
                     item,
                 )
+
+                if not isinstance(content, dict):
+                    continue
 
 
                 title = content.get(
@@ -73,7 +107,7 @@ class NewsService:
 
                 provider = content.get(
                     "provider",
-                    {}
+                    {},
                 )
 
                 if isinstance(provider, dict):
@@ -97,7 +131,7 @@ class NewsService:
 
                 canonical_url = content.get(
                     "canonicalUrl",
-                    {}
+                    {},
                 )
 
                 if isinstance(canonical_url, dict):
@@ -152,7 +186,7 @@ class NewsService:
 
                     resolutions = thumbnail.get(
                         "resolutions",
-                        []
+                        [],
                     )
 
                     if resolutions:
@@ -180,15 +214,39 @@ class NewsService:
 
 
             return {
-                "symbol": symbol.upper(),
+                "symbol": normalized_symbol,
                 "count": len(articles),
                 "articles": articles,
+                "data_status": "AVAILABLE",
+                "data_message": None,
             }
 
 
-        except Exception as e:
+        except Exception as error:
 
-            raise ValueError(
-                f"Unable to fetch news for "
-                f"{symbol}: {str(e)}"
+            error_message = str(error)
+
+            logger.warning(
+                "News unavailable for %s: %s",
+                normalized_symbol,
+                error_message,
+            )
+
+            if (
+                "Too Many Requests" in error_message
+                or "Rate limited" in error_message
+                or "429" in error_message
+            ):
+                reason = (
+                    "News provider is temporarily rate limited."
+                )
+
+            else:
+                reason = (
+                    "News data is temporarily unavailable."
+                )
+
+            return NewsService.empty_news_response(
+                normalized_symbol,
+                reason,
             )

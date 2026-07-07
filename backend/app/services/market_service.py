@@ -1,6 +1,11 @@
+import logging
+
 import yfinance as yf
 
 from app.data.stocks import STOCK_MASTER
+
+
+logger = logging.getLogger(__name__)
 
 
 class MarketService:
@@ -25,43 +30,149 @@ class MarketService:
 
         return results[:10]
 
+
+    @staticmethod
+    def get_stock_name(
+        symbol: str,
+        fallback: str | None = None,
+    ):
+        """
+        Resolve names from the local stock master without making
+        another external provider request.
+        """
+
+        normalized_symbol = symbol.upper()
+
+        for stock in STOCK_MASTER:
+
+            if stock["symbol"].upper() == normalized_symbol:
+                return stock["name"]
+
+        return fallback or normalized_symbol
+
+
+    @staticmethod
+    def empty_quote(symbol: str):
+        """
+        Schema-compatible degraded quote response.
+        """
+
+        normalized_symbol = symbol.upper()
+
+        return {
+            "symbol": normalized_symbol,
+            "company_name": MarketService.get_stock_name(
+                normalized_symbol,
+                normalized_symbol,
+            ),
+            "current_price": 0.0,
+            "previous_close": 0.0,
+            "open_price": 0.0,
+            "day_high": 0.0,
+            "day_low": 0.0,
+            "volume": 0,
+            "currency": (
+                "INR"
+                if normalized_symbol.endswith(".NS")
+                or normalized_symbol.endswith(".BO")
+                or normalized_symbol.startswith("^NSE")
+                or normalized_symbol == "^BSESN"
+                or normalized_symbol == "^INDIAVIX"
+                else "USD"
+            ),
+            "data_status": "DEGRADED",
+            "data_message":
+                "Market quote is temporarily unavailable.",
+        }
+
+
     @staticmethod
     def get_quote(symbol: str):
 
+        normalized_symbol = symbol.strip().upper()
+
         try:
 
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(normalized_symbol)
 
             history = ticker.history(period="2d")
 
             if history.empty:
-                raise ValueError("Invalid stock symbol")
 
-            info = ticker.fast_info
+                logger.warning(
+                    "No quote history returned for %s",
+                    normalized_symbol,
+                )
+
+                return MarketService.empty_quote(
+                    normalized_symbol
+                )
+
+
+            latest = history.iloc[-1]
 
             previous_close = (
                 history["Close"].iloc[-2]
                 if len(history) > 1
-                else history["Close"].iloc[-1]
+                else latest["Close"]
             )
 
+
             return {
-                "symbol": symbol.upper(),
-                "company_name": ticker.info.get(
-                    "longName",
-                    symbol.upper(),
+                "symbol": normalized_symbol,
+
+                "company_name":
+                    MarketService.get_stock_name(
+                        normalized_symbol,
+                        normalized_symbol,
+                    ),
+
+                "current_price":
+                    round(float(latest["Close"]), 2),
+
+                "previous_close":
+                    round(float(previous_close), 2),
+
+                "open_price":
+                    round(float(latest["Open"]), 2),
+
+                "day_high":
+                    round(float(latest["High"]), 2),
+
+                "day_low":
+                    round(float(latest["Low"]), 2),
+
+                "volume":
+                    int(latest["Volume"]),
+
+                "currency": (
+                    "INR"
+                    if normalized_symbol.endswith(".NS")
+                    or normalized_symbol.endswith(".BO")
+                    or normalized_symbol.startswith("^NSE")
+                    or normalized_symbol == "^BSESN"
+                    or normalized_symbol == "^INDIAVIX"
+                    else "USD"
                 ),
-                "current_price": float(history["Close"].iloc[-1]),
-                "previous_close": float(previous_close),
-                "open_price": float(history["Open"].iloc[-1]),
-                "day_high": float(history["High"].iloc[-1]),
-                "day_low": float(history["Low"].iloc[-1]),
-                "volume": int(history["Volume"].iloc[-1]),
-                "currency": info.get("currency", "USD"),
+
+                "data_status": "AVAILABLE",
+
+                "data_message": None,
             }
 
-        except Exception as e:
-            raise ValueError(str(e))
+
+        except Exception as error:
+
+            logger.warning(
+                "Quote unavailable for %s: %s",
+                normalized_symbol,
+                str(error),
+            )
+
+            return MarketService.empty_quote(
+                normalized_symbol
+            )
+
 
     @staticmethod
     def get_dashboard():
@@ -93,109 +204,243 @@ class MarketService:
             "ICICIBANK.NS",
         ]
 
-        return {
-            "indices": [
-                MarketService.simple_quote(
+
+        index_data = []
+
+        for item in indices:
+
+            try:
+                quote = MarketService.simple_quote(
                     item["symbol"],
                     item["name"],
                 )
-                for item in indices
-            ],
-            "watchlist": [
-                MarketService.simple_quote(symbol)
-                for symbol in watchlist
-            ],
-        }
 
-    @staticmethod
-    def simple_quote(symbol: str, name: str | None = None):
+            except Exception as error:
 
-        ticker = yf.Ticker(symbol)
+                logger.warning(
+                    "Dashboard index unavailable for %s: %s",
+                    item["symbol"],
+                    str(error),
+                )
 
-        history = ticker.history(period="2d")
+                quote = (
+                    MarketService.empty_simple_quote(
+                        item["symbol"],
+                        item["name"],
+                    )
+                )
 
-        if history.empty:
-            return {
-                "symbol": symbol,
-                "name": name or symbol,
-                "price": 0,
-                "change": 0,
-                "change_percent": 0,
-            }
+            index_data.append(quote)
 
-        latest = history.iloc[-1]
 
-        previous = (
-            history.iloc[-2]
-            if len(history) > 1
-            else latest
-        )
+        watchlist_data = []
 
-        change = latest.Close - previous.Close
+        for symbol in watchlist:
 
-        change_percent = (
-            change / previous.Close * 100
-            if previous.Close
-            else 0
-        )
+            try:
+                quote = MarketService.simple_quote(
+                    symbol
+                )
+
+            except Exception as error:
+
+                logger.warning(
+                    "Watchlist quote unavailable for %s: %s",
+                    symbol,
+                    str(error),
+                )
+
+                quote = (
+                    MarketService.empty_simple_quote(
+                        symbol
+                    )
+                )
+
+            watchlist_data.append(quote)
+
 
         return {
-            "symbol": symbol,
-            "name": ticker.info.get("longName", name or symbol),
-            "price": round(float(latest.Close), 2),
-            "change": round(float(change), 2),
-            "change_percent": round(float(change_percent), 2),
+            "indices": index_data,
+            "watchlist": watchlist_data,
         }
+
+
+    @staticmethod
+    def empty_simple_quote(
+        symbol: str,
+        name: str | None = None,
+    ):
+
+        normalized_symbol = symbol.upper()
+
+        return {
+            "symbol": normalized_symbol,
+
+            "name": (
+                name
+                or MarketService.get_stock_name(
+                    normalized_symbol,
+                    normalized_symbol,
+                )
+            ),
+
+            "price": 0.0,
+
+            "change": 0.0,
+
+            "change_percent": 0.0,
+
+            "data_status": "DEGRADED",
+        }
+
+
+    @staticmethod
+    def simple_quote(
+        symbol: str,
+        name: str | None = None,
+    ):
+
+        normalized_symbol = symbol.strip().upper()
+
+        try:
+
+            ticker = yf.Ticker(normalized_symbol)
+
+            history = ticker.history(period="2d")
+
+            if history.empty:
+
+                return MarketService.empty_simple_quote(
+                    normalized_symbol,
+                    name,
+                )
+
+
+            latest = history.iloc[-1]
+
+            previous = (
+                history.iloc[-2]
+                if len(history) > 1
+                else latest
+            )
+
+            latest_close = float(latest["Close"])
+
+            previous_close = float(
+                previous["Close"]
+            )
+
+            change = (
+                latest_close
+                - previous_close
+            )
+
+            change_percent = (
+                change
+                / previous_close
+                * 100
+                if previous_close
+                else 0
+            )
+
+
+            return {
+                "symbol": normalized_symbol,
+
+                "name": (
+                    name
+                    or MarketService.get_stock_name(
+                        normalized_symbol,
+                        normalized_symbol,
+                    )
+                ),
+
+                "price":
+                    round(latest_close, 2),
+
+                "change":
+                    round(change, 2),
+
+                "change_percent":
+                    round(change_percent, 2),
+
+                "data_status": "AVAILABLE",
+            }
+
+
+        except Exception as error:
+
+            logger.warning(
+                "Simple quote unavailable for %s: %s",
+                normalized_symbol,
+                str(error),
+            )
+
+            return MarketService.empty_simple_quote(
+                normalized_symbol,
+                name,
+            )
+
+
+    @staticmethod
+    def get_top_mover_symbols():
+
+        return [
+            "RELIANCE.NS",
+            "TCS.NS",
+            "INFY.NS",
+            "HDFCBANK.NS",
+            "ICICIBANK.NS",
+            "SBIN.NS",
+            "ITC.NS",
+            "LT.NS",
+            "BHARTIARTL.NS",
+            "TATAMOTORS.NS",
+        ]
+
+
     @staticmethod
     def get_top_gainers():
 
-        stocks = [
-            "RELIANCE.NS",
-            "TCS.NS",
-            "INFY.NS",
-            "HDFCBANK.NS",
-            "ICICIBANK.NS",
-            "SBIN.NS",
-            "ITC.NS",
-            "LT.NS",
-            "BHARTIARTL.NS",
-            "TATAMOTORS.NS",
-        ]
-
         data = [
             MarketService.simple_quote(symbol)
-            for symbol in stocks
+            for symbol
+            in MarketService.get_top_mover_symbols()
         ]
 
-        data.sort(
-            key=lambda x: x["change_percent"],
+        available_data = [
+            item
+            for item in data
+            if item.get("data_status") == "AVAILABLE"
+        ]
+
+        available_data.sort(
+            key=lambda item:
+                item["change_percent"],
             reverse=True,
         )
 
-        return data[:5]
+        return available_data[:5]
+
+
     @staticmethod
     def get_top_losers():
 
-        stocks = [
-            "RELIANCE.NS",
-            "TCS.NS",
-            "INFY.NS",
-            "HDFCBANK.NS",
-            "ICICIBANK.NS",
-            "SBIN.NS",
-            "ITC.NS",
-            "LT.NS",
-            "BHARTIARTL.NS",
-            "TATAMOTORS.NS",
-        ]
-
         data = [
             MarketService.simple_quote(symbol)
-            for symbol in stocks
+            for symbol
+            in MarketService.get_top_mover_symbols()
         ]
 
-        data.sort(
-            key=lambda x: x["change_percent"]
+        available_data = [
+            item
+            for item in data
+            if item.get("data_status") == "AVAILABLE"
+        ]
+
+        available_data.sort(
+            key=lambda item:
+                item["change_percent"]
         )
 
-        return data[:5]
+        return available_data[:5]
