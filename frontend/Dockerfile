@@ -8,7 +8,7 @@ RUN npm ci
 
 COPY . .
 
-ARG VITE_API_BASE_URL=http://127.0.0.1:8000
+ARG VITE_API_BASE_URL=https://stocksense-ai-uzj2.onrender.com
 
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
