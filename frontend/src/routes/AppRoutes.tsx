@@ -1,28 +1,98 @@
-import { Routes, Route } from "react-router-dom";
+import {
+  lazy,
+  Suspense,
+} from "react";
+
+import {
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 
 import AppLayout from "../layouts/AppLayout";
+import Loading from "../components/common/Loading";
 
-import Dashboard from "../pages/Dashboard";
-import Market from "../pages/Market";
-import Stocks from "../pages/Stocks";
-import Prediction from "../pages/Prediction";
-import Portfolio from "../pages/Portfolio";
-import AIAdvisor from "../pages/AIAdvisor";
-import NotFound from "../pages/NotFound";
+
+const Dashboard = lazy(
+  () => import("../pages/Dashboard")
+);
+
+const Market = lazy(
+  () => import("../pages/Market")
+);
+
+const Stocks = lazy(
+  () => import("../pages/Stocks")
+);
+
+const Prediction = lazy(
+  () => import("../pages/Prediction")
+);
+
+const Portfolio = lazy(
+  () => import("../pages/Portfolio")
+);
+
+const AIAdvisor = lazy(
+  () => import("../pages/AIAdvisor")
+);
+
+const NotFound = lazy(
+  () => import("../pages/NotFound")
+);
+
 
 export default function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="market" element={<Market />} />
-        <Route path="stocks" element={<Stocks />} />
-        <Route path="prediction" element={<Prediction />} />
-        <Route path="portfolio" element={<Portfolio />} />
-        <Route path="ai-advisor" element={<AIAdvisor />} />
-      </Route>
+    <Suspense fallback={<Loading />}>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route
+            index
+            element={
+              <Navigate
+                to="/dashboard"
+                replace
+              />
+            }
+          />
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/market"
+            element={<Market />}
+          />
+
+          <Route
+            path="/stocks"
+            element={<Stocks />}
+          />
+
+          <Route
+            path="/prediction"
+            element={<Prediction />}
+          />
+
+          <Route
+            path="/portfolio"
+            element={<Portfolio />}
+          />
+
+          <Route
+            path="/ai-advisor"
+            element={<AIAdvisor />}
+          />
+        </Route>
+
+        <Route
+          path="*"
+          element={<NotFound />}
+        />
+      </Routes>
+    </Suspense>
   );
 }

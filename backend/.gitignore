@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Python virtual environments
+.venv/
+venv/
+env/
+backend/.venv/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+backend/.env
+frontend/.env
+frontend/.env.development
+frontend/.env.production
+frontend/.env.local
+
+# Python testing and analysis cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Frontend build
+dist/
+frontend/dist/
+.vite/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python model artifacts
+*.joblib
+*.pkl
+*.pickle
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+# Environment files
+.env
+.env.*
+!.env.example

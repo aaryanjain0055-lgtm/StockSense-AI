@@ -1,63 +1,17 @@
-import { useEffect, useState } from "react";
-import { getQuote } from "../../services/marketService";
-type Quote = {
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Building2,
+  TrendingUp,
+} from "lucide-react";
+
+type Props = {
   symbol: string;
-  company_name: string;
-  current_price: number;
-  previous_close: number;
-  open_price: number;
-  day_high: number;
-  day_low: number;
-  volume: number;
-  currency: string;
 };
 
-export default function StockOverview() {
-  const [stock, setStock] = useState<Quote | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getQuote("RELIANCE.NS")
-      .then((data: Quote) => {
-        console.log("Stock Data:", data);
-        setStock(data);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          background: "#111827",
-          border: "1px solid #1e293b",
-          borderRadius: 16,
-          padding: 24,
-          color: "white",
-        }}
-      >
-        Loading...
-      </div>
-    );
-  }
-
-  if (!stock) {
-    return (
-      <div
-        style={{
-          background: "#111827",
-          border: "1px solid #1e293b",
-          borderRadius: 16,
-          padding: 24,
-          color: "red",
-        }}
-      >
-        Failed to load stock.
-      </div>
-    );
-  }
-
+export default function StockOverview({
+  symbol,
+}: Props) {
   return (
     <div
       style={{
@@ -67,76 +21,227 @@ export default function StockOverview() {
         padding: 24,
       }}
     >
-      <h2
+      <div
         style={{
-          color: "white",
-          fontSize: 28,
-          marginBottom: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 20,
+          flexWrap: "wrap",
         }}
       >
-        {stock.company_name}
-      </h2>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 12,
+              background: "#1e293b",
+            }}
+          >
+            <Building2
+              size={26}
+              color="#60a5fa"
+            />
+          </div>
 
-      <p
-        style={{
-          color: "#22c55e",
-          fontSize: 32,
-          fontWeight: "bold",
-          marginBottom: 24,
-        }}
-      >
-        ₹ {stock.current_price}
-      </p>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                marginBottom: 6,
+                color: "#94a3b8",
+                fontSize: 13,
+              }}
+            >
+              Selected Stock
+            </p>
+
+            <h2
+              style={{
+                margin: 0,
+                color: "#ffffff",
+                fontSize: 24,
+              }}
+            >
+              {symbol}
+            </h2>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <OverviewMetric
+            label="Market"
+            value={
+              symbol.endsWith(".NS")
+                ? "NSE"
+                : symbol.endsWith(".BO")
+                  ? "BSE"
+                  : "GLOBAL"
+            }
+          />
+
+          <OverviewMetric
+            label="Analysis"
+            value="Active"
+          />
+        </div>
+      </div>
 
       <div
         style={{
+          marginTop: 24,
+          paddingTop: 20,
+          borderTop: "1px solid #1e293b",
           display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          gap: 20,
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 16,
         }}
       >
-        <InfoCard title="Previous Close" value={stock.previous_close.toString()} />
-        <InfoCard title="Open" value={stock.open_price.toString()} />
-        <InfoCard title="Day High" value={stock.day_high.toString()} />
-        <InfoCard title="Day Low" value={stock.day_low.toString()} />
-        <InfoCard title="Volume" value={stock.volume.toLocaleString()} />
-        <InfoCard title="Currency" value={stock.currency} />
+        <InfoCard
+          icon={
+            <TrendingUp
+              size={18}
+              color="#60a5fa"
+            />
+          }
+          title="Live Analysis"
+          description="Market and analytical data for the selected stock."
+        />
+
+        <InfoCard
+          icon={
+            <ArrowUpRight
+              size={18}
+              color="#22c55e"
+            />
+          }
+          title="Bullish Factors"
+          description="Positive signals are evaluated across multiple factors."
+        />
+
+        <InfoCard
+          icon={
+            <ArrowDownRight
+              size={18}
+              color="#ef4444"
+            />
+          }
+          title="Risk Factors"
+          description="Technical weakness and model reliability are monitored."
+        />
       </div>
     </div>
   );
 }
 
-function InfoCard({
-  title,
-  value,
-}: {
-  title: string;
+type OverviewMetricProps = {
+  label: string;
   value: string;
-}) {
+};
+
+function OverviewMetric({
+  label,
+  value,
+}: OverviewMetricProps) {
   return (
     <div
       style={{
+        minWidth: 110,
+        padding: "10px 14px",
         background: "#1e293b",
-        padding: 18,
-        borderRadius: 12,
+        borderRadius: 10,
       }}
     >
       <p
         style={{
+          margin: 0,
+          marginBottom: 5,
           color: "#94a3b8",
-          marginBottom: 8,
+          fontSize: 12,
         }}
       >
-        {title}
+        {label}
       </p>
 
-      <h3
+      <strong
         style={{
-          color: "white",
+          color: "#f8fafc",
+          fontSize: 14,
         }}
       >
         {value}
-      </h3>
+      </strong>
+    </div>
+  );
+}
+
+type InfoCardProps = {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+};
+
+function InfoCard({
+  icon,
+  title,
+  description,
+}: InfoCardProps) {
+  return (
+    <div
+      style={{
+        padding: 16,
+        borderRadius: 12,
+        background: "#0f172a",
+        border: "1px solid #1e293b",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 10,
+        }}
+      >
+        {icon}
+
+        <strong
+          style={{
+            color: "#ffffff",
+            fontSize: 14,
+          }}
+        >
+          {title}
+        </strong>
+      </div>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#94a3b8",
+          fontSize: 13,
+          lineHeight: 1.6,
+        }}
+      >
+        {description}
+      </p>
     </div>
   );
 }

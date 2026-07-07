@@ -1,123 +1,134 @@
-import { Bell, Search, Sun, CircleDot } from "lucide-react";
+import { Bell } from "lucide-react";
+
+import StockSearch from "../common/StockSearch";
+
 
 export default function Navbar() {
+  function handleStockSelect(
+    symbol: string,
+  ) {
+    const normalizedSymbol =
+      symbol.trim().toUpperCase();
+
+    if (!normalizedSymbol) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "stock-symbol-selected",
+        {
+          detail: {
+            symbol:
+              normalizedSymbol,
+          },
+        },
+      ),
+    );
+  }
+
+
   return (
     <header
       style={{
         height: 72,
-        background: "#111827",
-        borderBottom: "1px solid #1e293b",
+
         display: "flex",
+
         alignItems: "center",
-        justifyContent: "space-between",
+
+        justifyContent:
+          "space-between",
+
+        gap: 24,
+
         padding: "0 28px",
+
+        background: "#0f172a",
+
+        borderBottom:
+          "1px solid #1e293b",
+
+        position: "sticky",
+
+        top: 0,
+
+        zIndex: 100,
       }}
     >
-      {/* Left */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
+          flex: 1,
+
+          maxWidth: 620,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            background: "#1e293b",
-            padding: "10px 14px",
-            borderRadius: 10,
-            width: 320,
-            color: "#94a3b8",
-          }}
-        >
-          <Search size={18} />
-
-          <input
-            placeholder="Search Stocks..."
-            style={{
-              marginLeft: 10,
-              width: "100%",
-              border: "none",
-              outline: "none",
-              background: "transparent",
-              color: "white",
-              fontSize: 14,
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            color: "#22c55e",
-            fontWeight: 600,
-          }}
-        >
-          <CircleDot size={12} />
-
-          Market Open
-        </div>
+        <StockSearch
+          onSelect={
+            handleStockSelect
+          }
+        />
       </div>
 
-      {/* Right */}
 
       <div
         style={{
           display: "flex",
+
           alignItems: "center",
-          gap: 18,
+
+          gap: 16,
         }}
       >
-        <Bell size={20} color="white" />
+        <button
+          type="button"
+          aria-label="Notifications"
+          style={{
+            width: 42,
 
-        <Sun size={20} color="white" />
+            height: 42,
+
+            display: "grid",
+
+            placeItems: "center",
+
+            background: "#111827",
+
+            border:
+              "1px solid #1e293b",
+
+            borderRadius: 10,
+
+            color: "#94a3b8",
+
+            cursor: "pointer",
+          }}
+        >
+          <Bell size={20} />
+        </button>
+
 
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
+            width: 40,
+
+            height: 40,
+
+            display: "grid",
+
+            placeItems: "center",
+
+            borderRadius: "50%",
+
+            background:
+              "linear-gradient(135deg, #2563eb, #7c3aed)",
+
+            color: "white",
+
+            fontWeight: 700,
           }}
         >
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              background: "#2563eb",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontWeight: "bold",
-              color: "white",
-            }}
-          >
-            A
-          </div>
-
-          <div>
-            <div
-              style={{
-                color: "white",
-                fontWeight: 600,
-              }}
-            >
-              Aaryan
-            </div>
-
-            <div
-              style={{
-                color: "#94a3b8",
-                fontSize: 12,
-              }}
-            >
-              Premium User
-            </div>
-          </div>
+          A
         </div>
       </div>
     </header>

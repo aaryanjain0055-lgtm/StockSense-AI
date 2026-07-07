@@ -1,16 +1,16 @@
-const gainers = [
-  { symbol: "RELIANCE", price: "₹3,124", change: "+2.54%" },
-  { symbol: "TCS", price: "₹4,082", change: "+1.84%" },
-  { symbol: "INFY", price: "₹1,723", change: "+1.62%" },
-  { symbol: "HDFCBANK", price: "₹1,945", change: "+1.41%" },
-];
+import { useEffect, useState } from "react";
+import {
+  getTopGainers,
+  getTopLosers,
+} from "../../../services/marketService";
 
-const losers = [
-  { symbol: "ADANIENT", price: "₹2,845", change: "-1.18%" },
-  { symbol: "BAJAJFINSV", price: "₹1,920", change: "-0.94%" },
-  { symbol: "SBIN", price: "₹864", change: "-0.72%" },
-  { symbol: "ITC", price: "₹432", change: "-0.51%" },
-];
+type Stock = {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  change_percent: number;
+};
 
 function Card({
   title,
@@ -18,7 +18,7 @@ function Card({
   positive,
 }: {
   title: string;
-  data: typeof gainers;
+  data: Stock[];
   positive: boolean;
 }) {
   return (
@@ -58,7 +58,7 @@ function Card({
                 fontWeight: 600,
               }}
             >
-              {stock.symbol}
+              {stock.name}
             </div>
 
             <div
@@ -67,17 +67,33 @@ function Card({
                 fontSize: 13,
               }}
             >
-              {stock.price}
+              ₹ {stock.price.toLocaleString()}
             </div>
           </div>
 
           <div
             style={{
-              color: positive ? "#22c55e" : "#ef4444",
-              fontWeight: 700,
+              textAlign: "right",
             }}
           >
-            {stock.change}
+            <div
+              style={{
+                color: positive ? "#22c55e" : "#ef4444",
+                fontWeight: 700,
+              }}
+            >
+              {positive ? "▲" : "▼"} {stock.change_percent.toFixed(2)}%
+            </div>
+
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: 12,
+              }}
+            >
+              {stock.change >= 0 ? "+" : ""}
+              {stock.change.toFixed(2)}
+            </div>
           </div>
         </div>
       ))}
@@ -86,6 +102,14 @@ function Card({
 }
 
 export default function TopMovers() {
+  const [gainers, setGainers] = useState<Stock[]>([]);
+  const [losers, setLosers] = useState<Stock[]>([]);
+
+  useEffect(() => {
+    getTopGainers().then(setGainers).catch(console.error);
+    getTopLosers().then(setLosers).catch(console.error);
+  }, []);
+
   return (
     <div
       style={{

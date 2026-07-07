@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from app.core.security import get_current_user
 from app.db.session import test_connection
 
+
 router = APIRouter()
 
 
@@ -16,13 +17,18 @@ async def home():
 
 @router.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+    }
 
 
 @router.get("/database")
 async def database():
     test_connection()
-    return {"database": "connected"}
+
+    return {
+        "database": "connected",
+    }
 
 
 @router.get("/profile")
