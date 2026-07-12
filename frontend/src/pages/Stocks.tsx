@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import StockSearch from "../components/common/StockSearch";
 
@@ -10,36 +10,46 @@ import AICompanySummary from "../components/stocks/AICompanySummary";
 import NewsSentiment from "../components/ai/NewsSentiment";
 import StockScore from "../components/stocks/StockScore";
 
-
 export default function Stocks() {
-  // ====================================================
-  // SELECTED STOCK
-  // ====================================================
-
   const [selectedSymbol, setSelectedSymbol] =
     useState<string>("RELIANCE.NS");
 
-
-  // ====================================================
-  // HANDLE STOCK CHANGE
-  // ====================================================
-
   const handleStockSelect = (symbol: string) => {
-    const cleanedSymbol = symbol
-      .trim()
-      .toUpperCase();
+    const cleanedSymbol = symbol.trim().toUpperCase();
 
-    if (!cleanedSymbol) {
-      return;
-    }
+    if (!cleanedSymbol) return;
 
     setSelectedSymbol(cleanedSymbol);
   };
 
+  useEffect(() => {
+    const handleNavbarSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        symbol: string;
+      }>;
 
-  // ====================================================
-  // PAGE
-  // ====================================================
+      const symbol =
+        customEvent.detail?.symbol
+          ?.trim()
+          ?.toUpperCase();
+
+      if (symbol) {
+        setSelectedSymbol(symbol);
+      }
+    };
+
+    window.addEventListener(
+      "stock-symbol-selected",
+      handleNavbarSearch
+    );
+
+    return () => {
+      window.removeEventListener(
+        "stock-symbol-selected",
+        handleNavbarSearch
+      );
+    };
+  }, []);
 
   return (
     <div
@@ -49,10 +59,6 @@ export default function Stocks() {
         gap: 24,
       }}
     >
-      {/* ============================================= */}
-      {/* PAGE HEADER */}
-      {/* ============================================= */}
-
       <div>
         <h1
           style={{
@@ -70,31 +76,24 @@ export default function Stocks() {
             lineHeight: 1.6,
           }}
         >
-          Analyze company fundamentals, technical indicators,
-          company intelligence, explainable stock scoring,
+          Analyze company fundamentals,
+          technical indicators,
+          company intelligence,
+          explainable stock scoring,
           and news sentiment.
         </p>
       </div>
-
-
-      {/* ============================================= */}
-      {/* STOCK SEARCH */}
-      {/* ============================================= */}
 
       <StockSearch
         onSelect={handleStockSelect}
       />
 
-
-      {/* ============================================= */}
-      {/* SELECTED STOCK INFO */}
-      {/* ============================================= */}
-
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           background: "#111827",
           border: "1px solid #1e293b",
           borderRadius: 12,
@@ -137,64 +136,29 @@ export default function Stocks() {
         </div>
       </div>
 
-
-      {/* ============================================= */}
-      {/* STOCK OVERVIEW */}
-      {/* ============================================= */}
-
       <StockOverview
         symbol={selectedSymbol}
       />
-
-
-      {/* ============================================= */}
-      {/* EXPLAINABLE STOCK SCORE */}
-      {/* ============================================= */}
 
       <StockScore
         symbol={selectedSymbol}
       />
 
-
-      {/* ============================================= */}
-      {/* PRICE CHART */}
-      {/* ============================================= */}
-
       <StockPriceChart
         symbol={selectedSymbol}
       />
-
-
-      {/* ============================================= */}
-      {/* TECHNICAL ANALYSIS */}
-      {/* ============================================= */}
 
       <TechnicalIndicators
         symbol={selectedSymbol}
       />
 
-
-      {/* ============================================= */}
-      {/* FUNDAMENTAL ANALYSIS */}
-      {/* ============================================= */}
-
       <FinancialStatements
         symbol={selectedSymbol}
       />
 
-
-      {/* ============================================= */}
-      {/* COMPANY INTELLIGENCE */}
-      {/* ============================================= */}
-
       <AICompanySummary
         symbol={selectedSymbol}
       />
-
-
-      {/* ============================================= */}
-      {/* NEWS SENTIMENT */}
-      {/* ============================================= */}
 
       <NewsSentiment
         symbol={selectedSymbol}

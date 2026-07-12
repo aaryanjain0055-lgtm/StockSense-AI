@@ -2,7 +2,7 @@ import logging
 
 import yfinance as yf
 
-from app.data.stocks import STOCK_MASTER
+from app.services.stock_loader import STOCK_MASTER
 
 
 logger = logging.getLogger(__name__)

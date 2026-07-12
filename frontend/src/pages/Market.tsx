@@ -1,5 +1,4 @@
 import PageHeader from "../components/common/PageHeader";
-import SearchBar from "../components/common/SearchBar";
 
 import MarketIndices from "../components/dashboard/market/MarketIndices";
 import SectorPerformance from "../components/dashboard/market/SectorPerformance";
@@ -18,8 +17,6 @@ export default function Market() {
         title="📈 Market Analysis"
         subtitle="Live market indices, sector performance and top movers."
       />
-
-      <SearchBar placeholder="Search stocks..." />
 
       <MarketIndices />
 

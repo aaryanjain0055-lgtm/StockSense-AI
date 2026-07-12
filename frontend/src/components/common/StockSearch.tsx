@@ -47,37 +47,53 @@ export default function StockSearch({
 
         const data = await searchStocks(query);
 
-        setFilteredStocks(data);
+        if (
+          Array.isArray(data) &&
+          data.length > 0
+        ) {
+          setFilteredStocks(data);
+        } else {
+          setFilteredStocks([
+            {
+              symbol: query.toUpperCase(),
+              name: "Search manually",
+            },
+          ]);
+        }
       } catch (error) {
         console.error(error);
-        setFilteredStocks([]);
+
+        setFilteredStocks([
+          {
+            symbol: query.toUpperCase(),
+            name: "Search manually",
+          },
+        ]);
       } finally {
         setIsSearching(false);
       }
-    }, 300);
+    }, 350);
 
     return () => clearTimeout(timeout);
   }, [query]);
 
-  const submitSymbol = (
-    rawSymbol: string,
-  ) => {
-    let symbol = rawSymbol
-      .trim()
-      .toUpperCase();
+  const submitSymbol = (rawSymbol: string) => {
+    let symbol = rawSymbol.trim().toUpperCase();
 
     if (!symbol) return;
 
     if (
-      !symbol.includes(".") &&
+      !symbol.endsWith(".NS") &&
       !symbol.startsWith("^")
     ) {
-      symbol = `${symbol}.NS`;
+      symbol += ".NS";
     }
 
     onSelect(symbol);
 
     setQuery(symbol);
+
+    setFilteredStocks([]);
 
     setShowSuggestions(false);
   };
@@ -124,8 +140,8 @@ export default function StockSearch({
 
         <input
           value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
+          onChange={(e) => {
+            setQuery(e.target.value);
             setShowSuggestions(true);
           }}
           onFocus={() =>
@@ -133,7 +149,7 @@ export default function StockSearch({
           }
           onKeyDown={handleKeyDown}
           autoComplete="off"
-          placeholder="Search stock, for example RELIANCE or TCS..."
+          placeholder="Search RELIANCE, TCS, INFY..."
           style={{
             flex: 1,
             background: "transparent",
@@ -167,7 +183,6 @@ export default function StockSearch({
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
                 gap: 6,
               }}
             >
@@ -183,79 +198,85 @@ export default function StockSearch({
         </button>
       </form>
 
-      {showSuggestions &&
-        filteredStocks.length > 0 && (
-          <div
-            style={{
-              position: "absolute",
-              top: "calc(100% + 8px)",
-              left: 0,
-              right: 0,
-              zIndex: 100,
-              background: "#111827",
-              border:
-                "1px solid #1e293b",
-              borderRadius: 12,
-              overflow: "hidden",
-              boxShadow:
-                "0 16px 40px rgba(0,0,0,0.35)",
-            }}
-          >
-            {filteredStocks.map(
-              (stock) => (
-                <button
-                  key={stock.symbol}
-                  type="button"
-                  onClick={() =>
-                    submitSymbol(
-                      stock.symbol,
-                    )
-                  }
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding:
-                      "14px 18px",
-                    border: "none",
-                    borderBottom:
-                      "1px solid #1e293b",
-                    background:
-                      "transparent",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    color: "white",
-                  }}
-                >
-                  <Search
-                    size={16}
-                    color="#64748b"
-                  />
+      {showSuggestions && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            background: "#111827",
+            border: "1px solid #1e293b",
+            borderRadius: 12,
+            overflow: "hidden",
+            boxShadow:
+              "0 16px 40px rgba(0,0,0,0.35)",
+          }}
+        >
+          {filteredStocks.length > 0 ? (
+            filteredStocks.map((stock) => (
+              <button
+                key={stock.symbol}
+                type="button"
+                onClick={() =>
+                  submitSymbol(stock.symbol)
+                }
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "14px 18px",
+                  border: "none",
+                  borderBottom:
+                    "1px solid #1e293b",
+                  background: "transparent",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  color: "white",
+                }}
+              >
+                <Search
+                  size={16}
+                  color="#64748b"
+                />
 
-                  <div>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                      }}
-                    >
-                      {stock.symbol}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "#94a3b8",
-                      }}
-                    >
-                      {stock.name}
-                    </div>
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                    }}
+                  >
+                    {stock.symbol}
                   </div>
-                </button>
-              ),
-            )}
-          </div>
-        )}
+
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#94a3b8",
+                    }}
+                  >
+                    {stock.name}
+                  </div>
+                </div>
+              </button>
+            ))
+          ) : (
+            query.trim().length >= 2 &&
+            !isSearching && (
+              <div
+                style={{
+                  padding: 16,
+                  color: "#94a3b8",
+                }}
+              >
+                No stocks found
+              </div>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 }

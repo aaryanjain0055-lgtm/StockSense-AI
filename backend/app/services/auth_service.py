@@ -41,13 +41,23 @@ class AuthService:
 
         user = UserRepository.get_by_email(db, email)
 
+        print("=" * 50)
+        print("EMAIL ENTERED :", repr(email))
+        print("PASSWORD      :", repr(password))
+
         if not user:
+            print("USER NOT FOUND")
             raise ValueError("Invalid email or password.")
 
-        if not verify_password(
-            password,
-            user.password_hash,
-        ):
+        print("DB EMAIL      :", repr(user.email))
+        print("HASH          :", user.password_hash)
+
+        result = verify_password(password, user.password_hash)
+
+        print("VERIFY RESULT :", result)
+        print("=" * 50)
+
+        if not result:
             raise ValueError("Invalid email or password.")
 
         token = create_access_token(

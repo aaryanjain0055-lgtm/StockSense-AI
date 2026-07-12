@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.services.stock_loader import load_stock_master
 
 from app.api.routes import router as general_router
 from app.api.auth import router as auth_router
@@ -130,3 +131,6 @@ app.include_router(
 app.include_router(
     prediction_router
 )
+@app.on_event("startup")
+async def startup_event():
+    load_stock_master()
