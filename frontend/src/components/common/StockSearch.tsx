@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type FormEvent,
   type KeyboardEvent,
@@ -9,37 +10,54 @@ import {
   LoaderCircle,
 } from "lucide-react";
 
+import { searchStocks } from "../../services/marketService";
+
 type Props = {
   onSelect: (symbol: string) => void;
 };
 
-const POPULAR_STOCKS = [
-  "RELIANCE.NS",
-  "TCS.NS",
-  "INFY.NS",
-  "HDFCBANK.NS",
-  "ICICIBANK.NS",
-  "SBIN.NS",
-  "ITC.NS",
-  "LT.NS",
-];
+type StockResult = {
+  symbol: string;
+  name: string;
+};
 
 export default function StockSearch({
   onSelect,
 }: Props) {
   const [query, setQuery] = useState("");
+
   const [isSearching, setIsSearching] =
     useState(false);
 
   const [showSuggestions, setShowSuggestions] =
     useState(false);
 
-  const filteredStocks = POPULAR_STOCKS.filter(
-    (symbol) =>
-      symbol
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-  );
+  const [filteredStocks, setFilteredStocks] =
+    useState<StockResult[]>([]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setFilteredStocks([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+
+        const data = await searchStocks(query);
+
+        setFilteredStocks(data);
+      } catch (error) {
+        console.error(error);
+        setFilteredStocks([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [query]);
 
   const submitSymbol = (
     rawSymbol: string,
@@ -48,11 +66,7 @@ export default function StockSearch({
       .trim()
       .toUpperCase();
 
-    if (!symbol) {
-      return;
-    }
-
-    setIsSearching(true);
+    if (!symbol) return;
 
     if (
       !symbol.includes(".") &&
@@ -64,14 +78,15 @@ export default function StockSearch({
     onSelect(symbol);
 
     setQuery(symbol);
+
     setShowSuggestions(false);
-    setIsSearching(false);
   };
 
   const handleSubmit = (
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
+
     submitSymbol(query);
   };
 
@@ -113,12 +128,12 @@ export default function StockSearch({
             setQuery(event.target.value);
             setShowSuggestions(true);
           }}
-          onFocus={() => {
-            setShowSuggestions(true);
-          }}
+          onFocus={() =>
+            setShowSuggestions(true)
+          }
           onKeyDown={handleKeyDown}
-          placeholder="Search stock, for example RELIANCE or TCS..."
           autoComplete="off"
+          placeholder="Search stock, for example RELIANCE or TCS..."
           style={{
             flex: 1,
             background: "transparent",
@@ -156,8 +171,11 @@ export default function StockSearch({
                 gap: 6,
               }}
             >
-              <LoaderCircle size={16} />
-              Loading
+              <LoaderCircle
+                size={16}
+                className="animate-spin"
+              />
+              Searching
             </span>
           ) : (
             "Analyze"
@@ -166,7 +184,6 @@ export default function StockSearch({
       </form>
 
       {showSuggestions &&
-        query.trim() &&
         filteredStocks.length > 0 && (
           <div
             style={{
@@ -174,7 +191,7 @@ export default function StockSearch({
               top: "calc(100% + 8px)",
               left: 0,
               right: 0,
-              zIndex: 50,
+              zIndex: 100,
               background: "#111827",
               border:
                 "1px solid #1e293b",
@@ -185,42 +202,55 @@ export default function StockSearch({
             }}
           >
             {filteredStocks.map(
-              (symbol) => (
+              (stock) => (
                 <button
-                  key={symbol}
+                  key={stock.symbol}
                   type="button"
                   onClick={() =>
-                    submitSymbol(symbol)
+                    submitSymbol(
+                      stock.symbol,
+                    )
                   }
                   style={{
+                    width: "100%",
                     display: "flex",
                     alignItems: "center",
-                    width: "100%",
+                    gap: 12,
+                    padding:
+                      "14px 18px",
                     border: "none",
                     borderBottom:
                       "1px solid #1e293b",
                     background:
                       "transparent",
-                    color: "#e2e8f0",
-                    padding:
-                      "13px 18px",
-                    textAlign: "left",
                     cursor: "pointer",
+                    textAlign: "left",
+                    color: "white",
                   }}
                 >
                   <Search
-                    size={15}
+                    size={16}
                     color="#64748b"
                   />
 
-                  <span
-                    style={{
-                      marginLeft: 10,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {symbol}
-                  </span>
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                      }}
+                    >
+                      {stock.symbol}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#94a3b8",
+                      }}
+                    >
+                      {stock.name}
+                    </div>
+                  </div>
                 </button>
               ),
             )}

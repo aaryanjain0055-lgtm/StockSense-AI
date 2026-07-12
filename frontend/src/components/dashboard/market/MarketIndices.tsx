@@ -14,14 +14,24 @@ export default function MarketIndices() {
   const [indices, setIndices] = useState<IndexData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    getDashboard()
-      .then((data) => {
-        setIndices(data.indices);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+useEffect(() => {
+  const loadDashboard = async () => {
+    try {
+      const data = await getDashboard();
+      setIndices(data.indices);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadDashboard();
+
+  const interval = setInterval(loadDashboard, 30000);
+
+  return () => clearInterval(interval);
+}, []);
 
   if (loading) {
     return <div style={{ color: "white" }}>Loading market indices...</div>;

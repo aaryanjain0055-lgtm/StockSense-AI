@@ -178,23 +178,27 @@ class MarketService:
     def get_dashboard():
 
         indices = [
-            {
-                "symbol": "^NSEI",
-                "name": "NIFTY 50",
-            },
-            {
-                "symbol": "^BSESN",
-                "name": "SENSEX",
-            },
-            {
-                "symbol": "^NSEBANK",
-                "name": "BANK NIFTY",
-            },
-            {
-                "symbol": "^INDIAVIX",
-                "name": "INDIA VIX",
-            },
-        ]
+    {
+        "symbol": "^NSEI",
+        "name": "NIFTY 50",
+    },
+    {
+        "symbol": "^BSESN",
+        "name": "SENSEX",
+    },
+    {
+        "symbol": "^NSEBANK",
+        "name": "BANK NIFTY",
+    },
+    {
+        "symbol": "GC=F",
+        "name": "GOLD",
+    },
+    {
+        "symbol": "SI=F",
+        "name": "SILVER",
+    },
+]
 
         watchlist = [
             "RELIANCE.NS",
