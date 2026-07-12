@@ -6,6 +6,7 @@ from app.api.auth import router as auth_router
 from app.api.market import router as market_router
 from app.api.historical import router as historical_router
 from app.api.prediction import router as prediction_router
+from app.api.portfolio import router as portfolio_router
 
 from app.api import technical
 from app.api import financial
@@ -71,32 +72,61 @@ app.include_router(
 # AUTHENTICATION
 # ============================================================
 
-app.include_router(auth_router)
+app.include_router(
+    auth_router
+)
 
 
 # ============================================================
 # MARKET DATA
 # ============================================================
 
-app.include_router(market_router)
+app.include_router(
+    market_router
+)
 
-app.include_router(historical_router)
+app.include_router(
+    historical_router
+)
 
-app.include_router(technical.router)
+app.include_router(
+    technical.router
+)
 
-app.include_router(financial.router)
+app.include_router(
+    financial.router
+)
 
-app.include_router(company.router)
+app.include_router(
+    company.router
+)
 
-app.include_router(news.router)
+app.include_router(
+    news.router
+)
 
-app.include_router(sentiment.router)
+app.include_router(
+    sentiment.router
+)
 
-app.include_router(scoring.router)
+app.include_router(
+    scoring.router
+)
+
+
+# ============================================================
+# PORTFOLIO
+# ============================================================
+
+app.include_router(
+    portfolio_router
+)
 
 
 # ============================================================
 # PRODUCTION PREDICTION
 # ============================================================
 
-app.include_router(prediction_router)
+app.include_router(
+    prediction_router
+)

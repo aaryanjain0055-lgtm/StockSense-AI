@@ -21,30 +21,37 @@ type Props = {
 };
 
 
+type SentimentDistribution = {
+  positive?: number;
+  neutral?: number;
+  negative?: number;
+};
+
+
+type SentimentDistributionPercent = {
+  positive?: number;
+  neutral?: number;
+  negative?: number;
+};
+
+
 type SentimentApiResponse = {
   symbol?: string;
 
-  sentiment?: string;
   overall_sentiment?: string;
-  label?: string;
 
-  score?: number;
-  sentiment_score?: number;
-
-  positive?: number;
-  positive_count?: number;
-
-  neutral?: number;
-  neutral_count?: number;
-
-  negative?: number;
-  negative_count?: number;
+  average_score?: number;
 
   article_count?: number;
-  total_articles?: number;
-  articles_analyzed?: number;
+
+  distribution?: SentimentDistribution;
+
+  distribution_percent?: SentimentDistributionPercent;
+
+  articles?: unknown[];
 
   summary?: string;
+
   reason?: string;
 
   data?: SentimentApiResponse;
@@ -112,50 +119,50 @@ function getPayload(
 function parseSentimentData(
   response: SentimentApiResponse,
 ): SentimentData {
-  const data =
-    getPayload(response);
+  const data = getPayload(response);
 
 
   const positive =
-    data.positive_count ??
-    data.positive ??
-    0;
+    data.distribution?.positive ?? 0;
 
 
   const neutral =
-    data.neutral_count ??
-    data.neutral ??
-    0;
+    data.distribution?.neutral ?? 0;
 
 
   const negative =
-    data.negative_count ??
-    data.negative ??
-    0;
+    data.distribution?.negative ?? 0;
 
 
   const articleCount =
     data.article_count ??
-    data.total_articles ??
-    data.articles_analyzed ??
+    data.articles?.length ??
     positive +
       neutral +
       negative;
 
 
+  const score =
+    typeof data.average_score === "number"
+      ? data.average_score
+      : null;
+
+
+  const sentiment =
+    data.overall_sentiment ??
+    "NEUTRAL";
+
+
+  const scoreText =
+    score !== null
+      ? score.toFixed(3)
+      : "N/A";
+
+
   return {
-    sentiment:
-      data.overall_sentiment ??
-      data.sentiment ??
-      data.label ??
-      "NEUTRAL",
+    sentiment,
 
-
-    score:
-      data.sentiment_score ??
-      data.score ??
-      null,
-
+    score,
 
     positive,
 
@@ -165,11 +172,10 @@ function parseSentimentData(
 
     articleCount,
 
-
     summary:
       data.summary ??
       data.reason ??
-      `News sentiment analysis completed across ${articleCount} articles.`,
+      `News sentiment analysis completed across ${articleCount} articles. Overall sentiment is ${sentiment.toLowerCase()} with an average normalized score of ${scoreText}.`,
   };
 }
 
@@ -254,7 +260,7 @@ function formatScore(
   }
 
 
-  return score.toFixed(2);
+  return score.toFixed(3);
 }
 
 
@@ -322,11 +328,13 @@ export default function NewsSentiment({
         }
 
 
-        setData(
+        const parsedData =
           parseSentimentData(
             response.data,
-          ),
-        );
+          );
+
+
+        setData(parsedData);
       } catch (err) {
         if (cancelled) {
           return;

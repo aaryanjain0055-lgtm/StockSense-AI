@@ -21,51 +21,40 @@ type Props = {
 
 
 type FinancialApiResponse = {
-  symbol?: string;
+  symbol: string;
 
-  market_cap?: number | null;
-  marketCap?: number | null;
+  company_name: string;
 
-  pe_ratio?: number | null;
-  trailing_pe?: number | null;
-  trailingPE?: number | null;
+  currency: string;
 
-  forward_pe?: number | null;
-  forwardPE?: number | null;
+  valuation: {
+    market_cap: number | null;
+    pe_ratio: number | null;
+    price_to_book: number | null;
+    eps: number | null;
+    book_value: number | null;
+  };
 
-  price_to_book?: number | null;
-  priceToBook?: number | null;
+  profitability: {
+    revenue: number | null;
+    net_income: number | null;
+    operating_margin: number | null;
+    profit_margin: number | null;
+    roe: number | null;
+    roa: number | null;
+  };
 
-  debt_to_equity?: number | null;
-  debtToEquity?: number | null;
+  balance_sheet: {
+    total_cash: number | null;
+    total_debt: number | null;
+    debt_to_equity: number | null;
+    current_ratio: number | null;
+  };
 
-  return_on_equity?: number | null;
-  returnOnEquity?: number | null;
-
-  profit_margin?: number | null;
-  profitMargins?: number | null;
-
-  revenue_growth?: number | null;
-  revenueGrowth?: number | null;
-
-  earnings_growth?: number | null;
-  earningsGrowth?: number | null;
-
-  total_revenue?: number | null;
-  totalRevenue?: number | null;
-
-  total_debt?: number | null;
-  totalDebt?: number | null;
-
-  total_cash?: number | null;
-  totalCash?: number | null;
-
-  current_ratio?: number | null;
-  currentRatio?: number | null;
-
-  financial?: FinancialApiResponse;
-  fundamentals?: FinancialApiResponse;
-  data?: FinancialApiResponse;
+  cash_flow: {
+    operating_cash_flow: number | null;
+    free_cash_flow: number | null;
+  };
 };
 
 
@@ -74,27 +63,35 @@ type FinancialData = {
 
   peRatio: number | null;
 
-  forwardPE: number | null;
-
   priceToBook: number | null;
+
+  eps: number | null;
+
+  bookValue: number | null;
 
   debtToEquity: number | null;
 
   returnOnEquity: number | null;
 
+  returnOnAssets: number | null;
+
+  operatingMargin: number | null;
+
   profitMargin: number | null;
 
-  revenueGrowth: number | null;
-
-  earningsGrowth: number | null;
-
   totalRevenue: number | null;
+
+  netIncome: number | null;
 
   totalDebt: number | null;
 
   totalCash: number | null;
 
   currentRatio: number | null;
+
+  operatingCashFlow: number | null;
+
+  freeCashFlow: number | null;
 };
 
 
@@ -103,134 +100,108 @@ const EMPTY_DATA: FinancialData = {
 
   peRatio: null,
 
-  forwardPE: null,
-
   priceToBook: null,
+
+  eps: null,
+
+  bookValue: null,
 
   debtToEquity: null,
 
   returnOnEquity: null,
 
+  returnOnAssets: null,
+
+  operatingMargin: null,
+
   profitMargin: null,
 
-  revenueGrowth: null,
-
-  earningsGrowth: null,
-
   totalRevenue: null,
+
+  netIncome: null,
 
   totalDebt: null,
 
   totalCash: null,
 
   currentRatio: null,
+
+  operatingCashFlow: null,
+
+  freeCashFlow: null,
 };
-
-
-function getPayload(
-  response: FinancialApiResponse,
-): FinancialApiResponse {
-  if (response.financial) {
-    return response.financial;
-  }
-
-  if (response.fundamentals) {
-    return response.fundamentals;
-  }
-
-  if (response.data) {
-    return response.data;
-  }
-
-  return response;
-}
 
 
 function parseFinancialData(
   response: FinancialApiResponse,
 ): FinancialData {
-  const data = getPayload(
-    response,
-  );
-
-
   return {
     marketCap:
-      data.market_cap ??
-      data.marketCap ??
+      response.valuation?.market_cap ??
       null,
-
 
     peRatio:
-      data.pe_ratio ??
-      data.trailing_pe ??
-      data.trailingPE ??
+      response.valuation?.pe_ratio ??
       null,
-
-
-    forwardPE:
-      data.forward_pe ??
-      data.forwardPE ??
-      null,
-
 
     priceToBook:
-      data.price_to_book ??
-      data.priceToBook ??
+      response.valuation?.price_to_book ??
       null,
 
+    eps:
+      response.valuation?.eps ??
+      null,
+
+    bookValue:
+      response.valuation?.book_value ??
+      null,
 
     debtToEquity:
-      data.debt_to_equity ??
-      data.debtToEquity ??
+      response.balance_sheet?.debt_to_equity ??
       null,
-
 
     returnOnEquity:
-      data.return_on_equity ??
-      data.returnOnEquity ??
+      response.profitability?.roe ??
       null,
 
+    returnOnAssets:
+      response.profitability?.roa ??
+      null,
+
+    operatingMargin:
+      response.profitability?.operating_margin ??
+      null,
 
     profitMargin:
-      data.profit_margin ??
-      data.profitMargins ??
+      response.profitability?.profit_margin ??
       null,
-
-
-    revenueGrowth:
-      data.revenue_growth ??
-      data.revenueGrowth ??
-      null,
-
-
-    earningsGrowth:
-      data.earnings_growth ??
-      data.earningsGrowth ??
-      null,
-
 
     totalRevenue:
-      data.total_revenue ??
-      data.totalRevenue ??
+      response.profitability?.revenue ??
       null,
 
+    netIncome:
+      response.profitability?.net_income ??
+      null,
 
     totalDebt:
-      data.total_debt ??
-      data.totalDebt ??
+      response.balance_sheet?.total_debt ??
       null,
-
 
     totalCash:
-      data.total_cash ??
-      data.totalCash ??
+      response.balance_sheet?.total_cash ??
       null,
 
-
     currentRatio:
-      data.current_ratio ??
-      data.currentRatio ??
+      response.balance_sheet?.current_ratio ??
+      null,
+
+    operatingCashFlow:
+      response.cash_flow?.operating_cash_flow ??
+      null,
+
+    freeCashFlow:
+      response.cash_flow?.free_cash_flow ??
       null,
   };
 }
@@ -247,10 +218,7 @@ function formatNumber(
     return "N/A";
   }
 
-
-  return value.toFixed(
-    decimals,
-  );
+  return value.toFixed(decimals);
 }
 
 
@@ -264,16 +232,7 @@ function formatPercentage(
     return "N/A";
   }
 
-
-  const percentage =
-    Math.abs(value) <= 1
-      ? value * 100
-      : value;
-
-
-  return `${percentage.toFixed(
-    2,
-  )}%`;
+  return `${value.toFixed(2)}%`;
 }
 
 
@@ -286,7 +245,6 @@ function formatLargeCurrency(
   ) {
     return "N/A";
   }
-
 
   const absoluteValue =
     Math.abs(value);
@@ -329,9 +287,7 @@ function formatLargeCurrency(
     "en-IN",
     {
       style: "currency",
-
       currency: "INR",
-
       maximumFractionDigits: 0,
     },
   ).format(value);
@@ -345,16 +301,13 @@ function getValueColor(
     return "#94a3b8";
   }
 
-
   if (value > 0) {
     return "#22c55e";
   }
 
-
   if (value < 0) {
     return "#ef4444";
   }
-
 
   return "#f59e0b";
 }
@@ -680,10 +633,10 @@ export default function FinancialStatements({
                     size={20}
                   />
                 }
-                title="Forward P/E"
+                title="EPS"
                 value={
                   formatNumber(
-                    data.forwardPE,
+                    data.eps,
                   )
                 }
               />
@@ -761,7 +714,7 @@ export default function FinancialStatements({
                   fontSize: 17,
                 }}
               >
-                Growth & Profitability
+                Profitability
               </h3>
 
 
@@ -789,6 +742,32 @@ export default function FinancialStatements({
 
 
                 <GrowthMetric
+                  label="Return on Assets"
+                  value={
+                    formatPercentage(
+                      data.returnOnAssets,
+                    )
+                  }
+                  rawValue={
+                    data.returnOnAssets
+                  }
+                />
+
+
+                <GrowthMetric
+                  label="Operating Margin"
+                  value={
+                    formatPercentage(
+                      data.operatingMargin,
+                    )
+                  }
+                  rawValue={
+                    data.operatingMargin
+                  }
+                />
+
+
+                <GrowthMetric
                   label="Profit Margin"
                   value={
                     formatPercentage(
@@ -797,32 +776,6 @@ export default function FinancialStatements({
                   }
                   rawValue={
                     data.profitMargin
-                  }
-                />
-
-
-                <GrowthMetric
-                  label="Revenue Growth"
-                  value={
-                    formatPercentage(
-                      data.revenueGrowth,
-                    )
-                  }
-                  rawValue={
-                    data.revenueGrowth
-                  }
-                />
-
-
-                <GrowthMetric
-                  label="Earnings Growth"
-                  value={
-                    formatPercentage(
-                      data.earningsGrowth,
-                    )
-                  }
-                  rawValue={
-                    data.earningsGrowth
                   }
                 />
               </div>
@@ -880,6 +833,16 @@ export default function FinancialStatements({
 
 
                 <BalanceMetric
+                  label="Net Income"
+                  value={
+                    formatLargeCurrency(
+                      data.netIncome,
+                    )
+                  }
+                />
+
+
+                <BalanceMetric
                   label="Total Debt"
                   value={
                     formatLargeCurrency(
@@ -894,6 +857,78 @@ export default function FinancialStatements({
                   value={
                     formatLargeCurrency(
                       data.totalCash,
+                    )
+                  }
+                />
+              </div>
+            </div>
+
+
+            <div
+              style={{
+                marginTop: 20,
+
+                background:
+                  "#0f172a",
+
+                border:
+                  "1px solid #1e293b",
+
+                borderRadius: 12,
+
+                padding: 20,
+              }}
+            >
+              <h3
+                style={{
+                  margin:
+                    "0 0 18px 0",
+
+                  color:
+                    "#f8fafc",
+
+                  fontSize: 17,
+                }}
+              >
+                Cash Flow
+              </h3>
+
+
+              <div
+                style={{
+                  display: "grid",
+
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(200px, 1fr))",
+
+                  gap: 18,
+                }}
+              >
+                <BalanceMetric
+                  label="Operating Cash Flow"
+                  value={
+                    formatLargeCurrency(
+                      data.operatingCashFlow,
+                    )
+                  }
+                />
+
+
+                <BalanceMetric
+                  label="Free Cash Flow"
+                  value={
+                    formatLargeCurrency(
+                      data.freeCashFlow,
+                    )
+                  }
+                />
+
+
+                <BalanceMetric
+                  label="Book Value"
+                  value={
+                    formatNumber(
+                      data.bookValue,
                     )
                   }
                 />

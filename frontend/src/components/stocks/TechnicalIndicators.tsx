@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
 import {
   Activity,
@@ -16,6 +13,52 @@ import api from "../../services/api";
 
 type Props = {
   symbol: string;
+};
+
+
+type TechnicalApiResponse = {
+  symbol: string;
+
+  current_price: number;
+
+  rsi: {
+    value: number;
+    signal: string;
+  };
+
+  macd: {
+    value: number;
+    signal_line: number;
+    histogram: number;
+    signal: string;
+  };
+
+  moving_averages: {
+    ema20: number;
+    ema50: number;
+    sma20: number;
+    sma50: number;
+  };
+
+  bollinger_bands: {
+    upper: number;
+    middle: number;
+    lower: number;
+  };
+
+  atr: number;
+
+  support: number;
+
+  resistance: number;
+
+  volume: {
+    current: number;
+    average_20d: number;
+    relative_volume: number;
+  };
+
+  trend: string;
 };
 
 
@@ -37,45 +80,6 @@ type TechnicalData = {
 };
 
 
-type TechnicalApiResponse = {
-  symbol?: string;
-
-  rsi?: number;
-  rsi_14?: number;
-
-  rsi_signal?: string;
-
-  macd?: number;
-
-  macd_signal?: number | string;
-
-  macd_signal_line?: number;
-
-  signal_line?: number;
-
-  macd_histogram?: number;
-
-  histogram?: number;
-
-  ema20?: number;
-  ema_20?: number;
-
-  ema50?: number;
-  ema_50?: number;
-
-  relative_volume?: number;
-  volume_ratio?: number;
-
-  trend?: string;
-
-  technical?: TechnicalApiResponse;
-
-  indicators?: TechnicalApiResponse;
-
-  data?: TechnicalApiResponse;
-};
-
-
 const EMPTY_DATA: TechnicalData = {
   rsi: null,
   rsiSignal: "N/A",
@@ -94,95 +98,48 @@ const EMPTY_DATA: TechnicalData = {
 };
 
 
-function getPayload(
-  response: TechnicalApiResponse,
-): TechnicalApiResponse {
-  if (response.technical) {
-    return response.technical;
-  }
-
-  if (response.indicators) {
-    return response.indicators;
-  }
-
-  if (response.data) {
-    return response.data;
-  }
-
-  return response;
-}
-
-
 function parseTechnicalData(
   response: TechnicalApiResponse,
 ): TechnicalData {
-  const data = getPayload(response);
-
-
-  const rawMacdSignal =
-    data.macd_signal;
-
-
   return {
     rsi:
-      data.rsi ??
-      data.rsi_14 ??
+      response.rsi?.value ??
       null,
 
     rsiSignal:
-      data.rsi_signal ??
+      response.rsi?.signal ??
       "N/A",
 
-
     macd:
-      data.macd ??
+      response.macd?.value ??
       null,
-
 
     macdSignalLine:
-      data.macd_signal_line ??
-      data.signal_line ??
-      (
-        typeof rawMacdSignal ===
-        "number"
-          ? rawMacdSignal
-          : null
-      ),
-
+      response.macd?.signal_line ??
+      null,
 
     macdHistogram:
-      data.macd_histogram ??
-      data.histogram ??
+      response.macd?.histogram ??
       null,
-
 
     macdSignal:
-      typeof rawMacdSignal ===
-      "string"
-        ? rawMacdSignal
-        : "N/A",
-
+      response.macd?.signal ??
+      "N/A",
 
     ema20:
-      data.ema20 ??
-      data.ema_20 ??
+      response.moving_averages?.ema20 ??
       null,
-
 
     ema50:
-      data.ema50 ??
-      data.ema_50 ??
+      response.moving_averages?.ema50 ??
       null,
-
 
     relativeVolume:
-      data.relative_volume ??
-      data.volume_ratio ??
+      response.volume?.relative_volume ??
       null,
 
-
     trend:
-      data.trend ??
+      response.trend ??
       "N/A",
   };
 }
@@ -230,24 +187,23 @@ function getSignalColor(
   const normalized =
     signal.toUpperCase();
 
-
   if (
     normalized.includes("BUY") ||
     normalized.includes("BULL") ||
-    normalized.includes("UPTREND")
+    normalized.includes("UPTREND") ||
+    normalized.includes("OVERSOLD")
   ) {
     return "#22c55e";
   }
 
-
   if (
     normalized.includes("SELL") ||
     normalized.includes("BEAR") ||
-    normalized.includes("DOWNTREND")
+    normalized.includes("DOWNTREND") ||
+    normalized.includes("OVERBOUGHT")
   ) {
     return "#ef4444";
   }
-
 
   return "#f59e0b";
 }
@@ -256,25 +212,15 @@ function getSignalColor(
 export default function TechnicalIndicators({
   symbol,
 }: Props) {
-  const [
-    data,
-    setData,
-  ] =
+  const [data, setData] =
     useState<TechnicalData>(
       EMPTY_DATA,
     );
 
+  const [loading, setLoading] =
+    useState(false);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
-
-  const [
-    error,
-    setError,
-  ] =
+  const [error, setError] =
     useState<string | null>(
       null,
     );
@@ -290,19 +236,14 @@ export default function TechnicalIndicators({
           .trim()
           .toUpperCase();
 
-
       if (!cleanSymbol) {
         setData(EMPTY_DATA);
-
         return;
       }
 
-
       try {
         setLoading(true);
-
         setError(null);
-
 
         const response =
           await api.get<TechnicalApiResponse>(
@@ -311,35 +252,26 @@ export default function TechnicalIndicators({
             )}`,
           );
 
-
         if (cancelled) {
           return;
         }
 
-
-        const parsedData =
+        setData(
           parseTechnicalData(
             response.data,
-          );
-
-
-        setData(parsedData);
+          ),
+        );
       } catch (err) {
         if (cancelled) {
           return;
         }
-
 
         console.error(
           "Technical indicators request failed:",
           err,
         );
 
-
-        setData(
-          EMPTY_DATA,
-        );
-
+        setData(EMPTY_DATA);
 
         setError(
           "Unable to load technical indicators.",
@@ -365,28 +297,18 @@ export default function TechnicalIndicators({
     <section
       style={{
         background: "#111827",
-
-        border:
-          "1px solid #1e293b",
-
+        border: "1px solid #1e293b",
         borderRadius: 16,
-
         padding: 24,
       }}
     >
       <div
         style={{
           display: "flex",
-
-          justifyContent:
-            "space-between",
-
+          justifyContent: "space-between",
           alignItems: "center",
-
           gap: 16,
-
           marginBottom: 24,
-
           flexWrap: "wrap",
         }}
       >
@@ -394,41 +316,29 @@ export default function TechnicalIndicators({
           <p
             style={{
               color: "#64748b",
-
               fontSize: 12,
-
               fontWeight: 700,
-
-              letterSpacing:
-                "0.08em",
-
-              margin:
-                "0 0 6px 0",
+              letterSpacing: "0.08em",
+              margin: "0 0 6px 0",
             }}
           >
             MARKET TECHNICALS
           </p>
 
-
           <h2
             style={{
               color: "#f8fafc",
-
               fontSize: 22,
-
               margin: 0,
             }}
           >
             Technical Indicators
           </h2>
 
-
           <p
             style={{
               color: "#94a3b8",
-
-              margin:
-                "8px 0 0 0",
+              margin: "8px 0 0 0",
             }}
           >
             {symbol}
@@ -439,20 +349,11 @@ export default function TechnicalIndicators({
         <div
           style={{
             display: "flex",
-
             alignItems: "center",
-
             gap: 8,
-
-            padding:
-              "9px 14px",
-
-            background:
-              "#0f172a",
-
-            border:
-              "1px solid #334155",
-
+            padding: "9px 14px",
+            background: "#0f172a",
+            border: "1px solid #334155",
             borderRadius: 10,
           }}
         >
@@ -477,16 +378,12 @@ export default function TechnicalIndicators({
             />
           )}
 
-
           <span
             style={{
-              color:
-                getSignalColor(
-                  data.trend,
-                ),
-
+              color: getSignalColor(
+                data.trend,
+              ),
               fontWeight: 700,
-
               fontSize: 13,
             }}
           >
@@ -500,12 +397,8 @@ export default function TechnicalIndicators({
         <div
           style={{
             minHeight: 220,
-
             display: "grid",
-
-            placeItems:
-              "center",
-
+            placeItems: "center",
             color: "#94a3b8",
           }}
         >
@@ -514,213 +407,132 @@ export default function TechnicalIndicators({
       )}
 
 
-      {!loading &&
-        error && (
+      {!loading && error && (
+        <div
+          style={{
+            minHeight: 160,
+            display: "grid",
+            placeItems: "center",
+            color: "#f87171",
+            textAlign: "center",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+
+      {!loading && !error && (
+        <>
           <div
             style={{
-              minHeight: 160,
-
               display: "grid",
-
-              placeItems:
-                "center",
-
-              color: "#f87171",
-
-              textAlign:
-                "center",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 16,
             }}
           >
-            {error}
+            <IndicatorCard
+              icon={<Gauge size={20} />}
+              title="RSI (14)"
+              value={formatNumber(data.rsi)}
+              signal={data.rsiSignal}
+            />
+
+            <IndicatorCard
+              icon={<BarChart3 size={20} />}
+              title="MACD"
+              value={formatNumber(data.macd)}
+              signal={data.macdSignal}
+            />
+
+            <IndicatorCard
+              icon={<TrendingUp size={20} />}
+              title="EMA 20"
+              value={formatPrice(data.ema20)}
+              signal="SHORT TERM"
+            />
+
+            <IndicatorCard
+              icon={<TrendingUp size={20} />}
+              title="EMA 50"
+              value={formatPrice(data.ema50)}
+              signal="MEDIUM TERM"
+            />
+
+            <IndicatorCard
+              icon={<Activity size={20} />}
+              title="Relative Volume"
+              value={formatNumber(
+                data.relativeVolume,
+              )}
+              signal={
+                data.relativeVolume === null
+                  ? "N/A"
+                  : data.relativeVolume > 1
+                    ? "ABOVE AVERAGE"
+                    : "BELOW AVERAGE"
+              }
+            />
           </div>
-        )}
 
 
-      {!loading &&
-        !error && (
-          <>
+          <div
+            style={{
+              marginTop: 20,
+              background: "#0f172a",
+              border: "1px solid #1e293b",
+              borderRadius: 12,
+              padding: 18,
+            }}
+          >
+            <h3
+              style={{
+                color: "#f8fafc",
+                margin: "0 0 16px 0",
+                fontSize: 16,
+              }}
+            >
+              MACD Details
+            </h3>
+
             <div
               style={{
                 display: "grid",
-
                 gridTemplateColumns:
-                  "repeat(auto-fit, minmax(180px, 1fr))",
-
+                  "repeat(auto-fit, minmax(150px, 1fr))",
                 gap: 16,
               }}
             >
-              <IndicatorCard
-                icon={
-                  <Gauge
-                    size={20}
-                  />
-                }
-                title="RSI (14)"
-                value={
-                  formatNumber(
-                    data.rsi,
-                  )
-                }
-                signal={
-                  data.rsiSignal
-                }
+              <SmallMetric
+                label="MACD"
+                value={formatNumber(
+                  data.macd,
+                )}
               />
 
-
-              <IndicatorCard
-                icon={
-                  <BarChart3
-                    size={20}
-                  />
-                }
-                title="MACD"
-                value={
-                  formatNumber(
-                    data.macd,
-                  )
-                }
-                signal={
-                  data.macdSignal
-                }
+              <SmallMetric
+                label="Signal Line"
+                value={formatNumber(
+                  data.macdSignalLine,
+                )}
               />
 
-
-              <IndicatorCard
-                icon={
-                  <TrendingUp
-                    size={20}
-                  />
-                }
-                title="EMA 20"
-                value={
-                  formatPrice(
-                    data.ema20,
-                  )
-                }
-                signal="SHORT TERM"
+              <SmallMetric
+                label="Histogram"
+                value={formatNumber(
+                  data.macdHistogram,
+                )}
               />
 
-
-              <IndicatorCard
-                icon={
-                  <TrendingUp
-                    size={20}
-                  />
-                }
-                title="EMA 50"
-                value={
-                  formatPrice(
-                    data.ema50,
-                  )
-                }
-                signal="MEDIUM TERM"
-              />
-
-
-              <IndicatorCard
-                icon={
-                  <Activity
-                    size={20}
-                  />
-                }
-                title="Relative Volume"
-                value={
-                  formatNumber(
-                    data.relativeVolume,
-                  )
-                }
-                signal={
-                  data.relativeVolume !==
-                    null &&
-                  data.relativeVolume >
-                    1
-                    ? "ABOVE AVERAGE"
-                    : "BELOW AVERAGE"
-                }
+              <SmallMetric
+                label="Signal"
+                value={data.macdSignal}
               />
             </div>
-
-
-            <div
-              style={{
-                marginTop: 20,
-
-                background:
-                  "#0f172a",
-
-                border:
-                  "1px solid #1e293b",
-
-                borderRadius: 12,
-
-                padding: 18,
-              }}
-            >
-              <h3
-                style={{
-                  color:
-                    "#f8fafc",
-
-                  margin:
-                    "0 0 16px 0",
-
-                  fontSize: 16,
-                }}
-              >
-                MACD Details
-              </h3>
-
-
-              <div
-                style={{
-                  display: "grid",
-
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(150px, 1fr))",
-
-                  gap: 16,
-                }}
-              >
-                <SmallMetric
-                  label="MACD"
-                  value={
-                    formatNumber(
-                      data.macd,
-                    )
-                  }
-                />
-
-
-                <SmallMetric
-                  label="Signal Line"
-                  value={
-                    formatNumber(
-                      data.macdSignalLine,
-                    )
-                  }
-                />
-
-
-                <SmallMetric
-                  label="Histogram"
-                  value={
-                    formatNumber(
-                      data.macdHistogram,
-                    )
-                  }
-                />
-
-
-                <SmallMetric
-                  label="Signal"
-                  value={
-                    data.macdSignal
-                  }
-                />
-              </div>
-            </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -728,11 +540,8 @@ export default function TechnicalIndicators({
 
 type IndicatorCardProps = {
   icon: React.ReactNode;
-
   title: string;
-
   value: string;
-
   signal: string;
 };
 
@@ -747,64 +556,45 @@ function IndicatorCard({
     <div
       style={{
         background: "#1e293b",
-
-        border:
-          "1px solid #334155",
-
+        border: "1px solid #334155",
         borderRadius: 12,
-
         padding: 18,
       }}
     >
       <div
         style={{
           color: "#60a5fa",
-
           marginBottom: 14,
         }}
       >
         {icon}
       </div>
 
-
       <p
         style={{
           color: "#94a3b8",
-
-          margin:
-            "0 0 8px 0",
-
+          margin: "0 0 8px 0",
           fontSize: 13,
         }}
       >
         {title}
       </p>
 
-
       <strong
         style={{
           display: "block",
-
           color: "#f8fafc",
-
           fontSize: 22,
-
           marginBottom: 8,
         }}
       >
         {value}
       </strong>
 
-
       <span
         style={{
-          color:
-            getSignalColor(
-              signal,
-            ),
-
+          color: getSignalColor(signal),
           fontSize: 12,
-
           fontWeight: 700,
         }}
       >
@@ -817,7 +607,6 @@ function IndicatorCard({
 
 type SmallMetricProps = {
   label: string;
-
   value: string;
 };
 
@@ -831,21 +620,16 @@ function SmallMetric({
       <p
         style={{
           color: "#64748b",
-
-          margin:
-            "0 0 6px 0",
-
+          margin: "0 0 6px 0",
           fontSize: 12,
         }}
       >
         {label}
       </p>
 
-
       <strong
         style={{
           color: "#e2e8f0",
-
           fontSize: 15,
         }}
       >

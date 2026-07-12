@@ -4,12 +4,12 @@ import {
 } from "react";
 
 import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
   BrainCircuit,
-  Building2,
-  CheckCircle2,
-  Info,
-  ShieldAlert,
-  Sparkles,
+  Newspaper,
+  TrendingDown,
   TrendingUp,
 } from "lucide-react";
 
@@ -21,279 +21,351 @@ type Props = {
 };
 
 
-type CompanyApiResponse = {
-  symbol?: string;
-
-  name?: string;
-  company_name?: string;
-  longName?: string;
-
-  sector?: string;
-  industry?: string;
-
-  description?: string;
+type SentimentArticle = {
+  title?: string;
   summary?: string;
-  long_business_summary?: string;
-  longBusinessSummary?: string;
+  publisher?: string;
+  link?: string;
 
-  website?: string;
-  country?: string;
-
-  employees?: number;
-  full_time_employees?: number;
-  fullTimeEmployees?: number;
-
-  strengths?: string[];
-  risks?: string[];
-  opportunities?: string[];
-
-  company?: CompanyApiResponse;
-  profile?: CompanyApiResponse;
-  data?: CompanyApiResponse;
+  sentiment?: {
+    label?: string;
+    raw_score?: number;
+    normalized_score?: number;
+    confidence?: number;
+    positive_keywords?: string[];
+    negative_keywords?: string[];
+  };
 };
 
 
-type CompanyData = {
-  name: string;
+type SentimentApiResponse = {
+  symbol: string;
 
-  sector: string;
+  article_count: number;
 
-  industry: string;
+  overall_sentiment: string;
 
-  description: string;
+  average_score: number;
 
-  website: string;
+  distribution: {
+    positive: number;
+    negative: number;
+    neutral: number;
+  };
 
-  country: string;
+  distribution_percent: {
+    positive: number;
+    negative: number;
+    neutral: number;
+  };
 
-  employees: number | null;
-
-  strengths: string[];
-
-  risks: string[];
-
-  opportunities: string[];
+  articles: SentimentArticle[];
 };
 
 
-const EMPTY_DATA: CompanyData = {
-  name: "N/A",
+type SentimentData = {
+  sentiment: string;
 
-  sector: "N/A",
+  normalizedScore: number | null;
 
-  industry: "N/A",
+  displayScore: number | null;
 
-  description:
-    "Company information is currently unavailable.",
+  positive: number;
 
-  website: "",
+  neutral: number;
 
-  country: "N/A",
+  negative: number;
 
-  employees: null,
+  positivePercent: number;
 
-  strengths: [],
+  neutralPercent: number;
 
-  risks: [],
+  negativePercent: number;
 
-  opportunities: [],
+  articleCount: number;
+
+  summary: string;
 };
 
 
-function getPayload(
-  response: CompanyApiResponse,
-): CompanyApiResponse {
-  if (response.company) {
-    return response.company;
+const EMPTY_DATA: SentimentData = {
+  sentiment: "NEUTRAL",
+
+  normalizedScore: null,
+
+  displayScore: null,
+
+  positive: 0,
+
+  neutral: 0,
+
+  negative: 0,
+
+  positivePercent: 0,
+
+  neutralPercent: 0,
+
+  negativePercent: 0,
+
+  articleCount: 0,
+
+  summary:
+    "News sentiment information is currently unavailable.",
+};
+
+
+function buildSummary(
+  sentiment: string,
+  articleCount: number,
+  positive: number,
+  neutral: number,
+  negative: number,
+): string {
+  if (articleCount === 0) {
+    return (
+      "No recent news articles were available for sentiment analysis."
+    );
   }
 
-  if (response.profile) {
-    return response.profile;
+
+  if (sentiment === "POSITIVE") {
+    return (
+      `News sentiment is positive across ${articleCount} analyzed articles. ` +
+      `${positive} articles were classified as positive, ` +
+      `${neutral} as neutral, and ${negative} as negative.`
+    );
   }
 
-  if (response.data) {
-    return response.data;
+
+  if (sentiment === "NEGATIVE") {
+    return (
+      `News sentiment is negative across ${articleCount} analyzed articles. ` +
+      `${positive} articles were classified as positive, ` +
+      `${neutral} as neutral, and ${negative} as negative.`
+    );
   }
 
-  return response;
+
+  return (
+    `News sentiment is neutral across ${articleCount} analyzed articles. ` +
+    `${positive} articles were classified as positive, ` +
+    `${neutral} as neutral, and ${negative} as negative.`
+  );
 }
 
 
-function parseCompanyData(
-  response: CompanyApiResponse,
-): CompanyData {
-  const data = getPayload(response);
+function parseSentimentData(
+  response: SentimentApiResponse,
+): SentimentData {
+  const normalizedScore =
+    Number.isFinite(
+      response.average_score,
+    )
+      ? response.average_score
+      : null;
+
+
+  /*
+   * Backend average_score range:
+   * -1.0 to +1.0
+   *
+   * Convert to a UI score:
+   * -1.0 => 0
+   *  0.0 => 50
+   * +1.0 => 100
+   */
+  const displayScore =
+    normalizedScore === null
+      ? null
+      : Math.max(
+          0,
+          Math.min(
+            100,
+            (normalizedScore + 1) * 50,
+          ),
+        );
+
+
+  const positive =
+    response.distribution?.positive ??
+    0;
+
+
+  const neutral =
+    response.distribution?.neutral ??
+    0;
+
+
+  const negative =
+    response.distribution?.negative ??
+    0;
+
+
+  const articleCount =
+    response.article_count ??
+    positive +
+      neutral +
+      negative;
+
+
+  const sentiment =
+    response.overall_sentiment ??
+    "NEUTRAL";
 
 
   return {
-    name:
-      data.name ??
-      data.company_name ??
-      data.longName ??
-      "N/A",
+    sentiment,
 
+    normalizedScore,
 
-    sector:
-      data.sector ??
-      "N/A",
+    displayScore,
 
+    positive,
 
-    industry:
-      data.industry ??
-      "N/A",
+    neutral,
 
+    negative,
 
-    description:
-      data.description ??
-      data.summary ??
-      data.long_business_summary ??
-      data.longBusinessSummary ??
-      "Company information is currently unavailable.",
+    positivePercent:
+      response.distribution_percent
+        ?.positive ??
+      0,
 
+    neutralPercent:
+      response.distribution_percent
+        ?.neutral ??
+      0,
 
-    website:
-      data.website ??
-      "",
+    negativePercent:
+      response.distribution_percent
+        ?.negative ??
+      0,
 
+    articleCount,
 
-    country:
-      data.country ??
-      "N/A",
-
-
-    employees:
-      data.employees ??
-      data.full_time_employees ??
-      data.fullTimeEmployees ??
-      null,
-
-
-    strengths:
-      Array.isArray(data.strengths)
-        ? data.strengths
-        : [],
-
-
-    risks:
-      Array.isArray(data.risks)
-        ? data.risks
-        : [],
-
-
-    opportunities:
-      Array.isArray(data.opportunities)
-        ? data.opportunities
-        : [],
+    summary: buildSummary(
+      sentiment,
+      articleCount,
+      positive,
+      neutral,
+      negative,
+    ),
   };
 }
 
 
-function formatEmployees(
-  value: number | null,
+function getSentimentColor(
+  sentiment: string,
+): string {
+  const value =
+    sentiment.toUpperCase();
+
+
+  if (
+    value.includes("POSITIVE") ||
+    value.includes("BULLISH")
+  ) {
+    return "#22c55e";
+  }
+
+
+  if (
+    value.includes("NEGATIVE") ||
+    value.includes("BEARISH")
+  ) {
+    return "#ef4444";
+  }
+
+
+  return "#f59e0b";
+}
+
+
+function getSentimentIcon(
+  sentiment: string,
+) {
+  const value =
+    sentiment.toUpperCase();
+
+
+  if (
+    value.includes("POSITIVE") ||
+    value.includes("BULLISH")
+  ) {
+    return (
+      <TrendingUp
+        size={20}
+        color="#22c55e"
+      />
+    );
+  }
+
+
+  if (
+    value.includes("NEGATIVE") ||
+    value.includes("BEARISH")
+  ) {
+    return (
+      <TrendingDown
+        size={20}
+        color="#ef4444"
+      />
+    );
+  }
+
+
+  return (
+    <Activity
+      size={20}
+      color="#f59e0b"
+    />
+  );
+}
+
+
+function formatScore(
+  score: number | null,
 ): string {
   if (
-    value === null ||
-    !Number.isFinite(value)
+    score === null ||
+    !Number.isFinite(score)
   ) {
     return "N/A";
   }
 
 
-  return new Intl.NumberFormat(
-    "en-IN",
-  ).format(value);
+  return score.toFixed(2);
 }
 
 
-function generateStrengths(
-  data: CompanyData,
-): string[] {
-  if (data.strengths.length > 0) {
-    return data.strengths;
-  }
-
-
-  const strengths: string[] = [];
-
-
-  if (data.sector !== "N/A") {
-    strengths.push(
-      `Established presence in the ${data.sector} sector.`,
-    );
-  }
-
-
-  if (data.industry !== "N/A") {
-    strengths.push(
-      `Operates in the ${data.industry} industry.`,
-    );
-  }
-
-
-  if (data.employees !== null) {
-    strengths.push(
-      "Large operational workforce and established business infrastructure.",
-    );
-  }
-
-
-  return strengths;
-}
-
-
-function generateOpportunities(
-  data: CompanyData,
-): string[] {
+function formatNormalizedScore(
+  score: number | null,
+): string {
   if (
-    data.opportunities.length > 0
+    score === null ||
+    !Number.isFinite(score)
   ) {
-    return data.opportunities;
+    return "N/A";
   }
 
 
-  const opportunities: string[] = [];
-
-
-  if (data.sector !== "N/A") {
-    opportunities.push(
-      `Potential growth opportunities linked to developments in the ${data.sector} sector.`,
-    );
+  if (score > 0) {
+    return `+${score.toFixed(3)}`;
   }
 
 
-  opportunities.push(
-    "Future performance may benefit from business expansion, operational efficiency, and favorable market conditions.",
-  );
-
-
-  return opportunities;
+  return score.toFixed(3);
 }
 
 
-function generateRisks(
-  data: CompanyData,
-): string[] {
-  if (data.risks.length > 0) {
-    return data.risks;
-  }
-
-
-  return [
-    "Company performance can be affected by market volatility and changing economic conditions.",
-
-    "Investors should evaluate valuation, earnings growth, debt levels, and industry conditions before making decisions.",
-  ];
-}
-
-
-export default function AICompanySummary({
+export default function NewsSentiment({
   symbol,
 }: Props) {
   const [
     data,
     setData,
   ] =
-    useState<CompanyData>(
+    useState<SentimentData>(
       EMPTY_DATA,
     );
 
@@ -317,7 +389,7 @@ export default function AICompanySummary({
     let cancelled = false;
 
 
-    async function loadCompanyData() {
+    async function loadSentiment() {
       const cleanSymbol =
         symbol
           .trim()
@@ -338,8 +410,8 @@ export default function AICompanySummary({
 
 
         const response =
-          await api.get<CompanyApiResponse>(
-            `/company/${encodeURIComponent(
+          await api.get<SentimentApiResponse>(
+            `/sentiment/${encodeURIComponent(
               cleanSymbol,
             )}`,
           );
@@ -351,7 +423,7 @@ export default function AICompanySummary({
 
 
         setData(
-          parseCompanyData(
+          parseSentimentData(
             response.data,
           ),
         );
@@ -362,7 +434,7 @@ export default function AICompanySummary({
 
 
         console.error(
-          "Company information request failed:",
+          "Sentiment request failed:",
           err,
         );
 
@@ -371,7 +443,7 @@ export default function AICompanySummary({
 
 
         setError(
-          "Unable to load company intelligence.",
+          "Unable to load news sentiment analysis.",
         );
       } finally {
         if (!cancelled) {
@@ -381,25 +453,13 @@ export default function AICompanySummary({
     }
 
 
-    loadCompanyData();
+    loadSentiment();
 
 
     return () => {
       cancelled = true;
     };
   }, [symbol]);
-
-
-  const strengths =
-    generateStrengths(data);
-
-
-  const opportunities =
-    generateOpportunities(data);
-
-
-  const risks =
-    generateRisks(data);
 
 
   return (
@@ -419,10 +479,10 @@ export default function AICompanySummary({
         style={{
           display: "flex",
 
-          alignItems: "center",
-
           justifyContent:
             "space-between",
+
+          alignItems: "center",
 
           gap: 16,
 
@@ -453,9 +513,9 @@ export default function AICompanySummary({
               borderRadius: 12,
 
               background:
-                "rgba(59, 130, 246, 0.12)",
+                "rgba(139, 92, 246, 0.12)",
 
-              color: "#60a5fa",
+              color: "#a78bfa",
             }}
           >
             <BrainCircuit
@@ -467,6 +527,9 @@ export default function AICompanySummary({
           <div>
             <p
               style={{
+                margin:
+                  "0 0 5px 0",
+
                 color: "#64748b",
 
                 fontSize: 12,
@@ -475,26 +538,37 @@ export default function AICompanySummary({
 
                 letterSpacing:
                   "0.08em",
-
-                margin:
-                  "0 0 5px 0",
               }}
             >
-              COMPANY INTELLIGENCE
+              MARKET INTELLIGENCE
             </p>
 
 
             <h2
               style={{
+                margin: 0,
+
                 color: "#f8fafc",
 
                 fontSize: 22,
-
-                margin: 0,
               }}
             >
-              AI Company Summary
+              News Sentiment
             </h2>
+
+
+            <p
+              style={{
+                margin:
+                  "7px 0 0 0",
+
+                color: "#94a3b8",
+
+                fontSize: 13,
+              }}
+            >
+              {symbol}
+            </p>
           </div>
         </div>
 
@@ -510,28 +584,32 @@ export default function AICompanySummary({
             padding:
               "9px 14px",
 
-            borderRadius: 10,
-
             background: "#0f172a",
 
             border:
               "1px solid #334155",
 
-            color: "#a78bfa",
+            borderRadius: 10,
           }}
         >
-          <Sparkles
-            size={17}
-          />
+          {getSentimentIcon(
+            data.sentiment,
+          )}
+
 
           <span
             style={{
-              fontSize: 12,
+              color:
+                getSentimentColor(
+                  data.sentiment,
+                ),
+
+              fontSize: 13,
 
               fontWeight: 700,
             }}
           >
-            EXPLAINABLE ANALYSIS
+            {data.sentiment}
           </span>
         </div>
       </div>
@@ -540,7 +618,7 @@ export default function AICompanySummary({
       {loading && (
         <div
           style={{
-            minHeight: 250,
+            minHeight: 240,
 
             display: "grid",
 
@@ -549,7 +627,7 @@ export default function AICompanySummary({
             color: "#94a3b8",
           }}
         >
-          Loading company intelligence...
+          Analyzing news sentiment...
         </div>
       )}
 
@@ -564,9 +642,9 @@ export default function AICompanySummary({
 
               placeItems: "center",
 
-              textAlign: "center",
-
               color: "#f87171",
+
+              textAlign: "center",
             }}
           >
             {error}
@@ -577,6 +655,103 @@ export default function AICompanySummary({
       {!loading &&
         !error && (
           <>
+            <div
+              style={{
+                display: "grid",
+
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(180px, 1fr))",
+
+                gap: 16,
+
+                marginBottom: 20,
+              }}
+            >
+              <MetricCard
+                icon={
+                  <BarChart3
+                    size={20}
+                  />
+                }
+                label="Sentiment Score"
+                value={formatScore(
+                  data.displayScore,
+                )}
+                color="#60a5fa"
+              />
+
+
+              <MetricCard
+                icon={
+                  <Activity
+                    size={20}
+                  />
+                }
+                label="Normalized Score"
+                value={formatNormalizedScore(
+                  data.normalizedScore,
+                )}
+                color="#38bdf8"
+              />
+
+
+              <MetricCard
+                icon={
+                  <Newspaper
+                    size={20}
+                  />
+                }
+                label="Articles Analyzed"
+                value={String(
+                  data.articleCount,
+                )}
+                color="#a78bfa"
+              />
+
+
+              <MetricCard
+                icon={
+                  <TrendingUp
+                    size={20}
+                  />
+                }
+                label="Positive"
+                value={String(
+                  data.positive,
+                )}
+                color="#22c55e"
+              />
+
+
+              <MetricCard
+                icon={
+                  <Activity
+                    size={20}
+                  />
+                }
+                label="Neutral"
+                value={String(
+                  data.neutral,
+                )}
+                color="#f59e0b"
+              />
+
+
+              <MetricCard
+                icon={
+                  <TrendingDown
+                    size={20}
+                  />
+                }
+                label="Negative"
+                value={String(
+                  data.negative,
+                )}
+                color="#ef4444"
+              />
+            </div>
+
+
             <div
               style={{
                 background: "#0f172a",
@@ -591,91 +766,48 @@ export default function AICompanySummary({
                 marginBottom: 20,
               }}
             >
-              <div
+              <h3
                 style={{
-                  display: "flex",
+                  color: "#f8fafc",
 
-                  alignItems:
-                    "flex-start",
+                  margin:
+                    "0 0 18px 0",
 
-                  gap: 14,
+                  fontSize: 17,
                 }}
               >
-                <Building2
-                  size={24}
-                  color="#60a5fa"
-                />
+                Sentiment Distribution
+              </h3>
 
 
-                <div>
-                  <h3
-                    style={{
-                      color:
-                        "#f8fafc",
-
-                      fontSize: 20,
-
-                      margin:
-                        "0 0 8px 0",
-                    }}
-                  >
-                    {data.name}
-                  </h3>
+              <SentimentBar
+                label="Positive"
+                count={data.positive}
+                percentage={
+                  data.positivePercent
+                }
+                barColor="#22c55e"
+              />
 
 
-                  <p
-                    style={{
-                      color:
-                        "#94a3b8",
-
-                      margin: 0,
-
-                      fontSize: 14,
-                    }}
-                  >
-                    {symbol}
-                  </p>
-                </div>
-              </div>
+              <SentimentBar
+                label="Neutral"
+                count={data.neutral}
+                percentage={
+                  data.neutralPercent
+                }
+                barColor="#f59e0b"
+              />
 
 
-              <div
-                style={{
-                  display: "grid",
-
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(170px, 1fr))",
-
-                  gap: 16,
-
-                  marginTop: 20,
-                }}
-              >
-                <CompanyMetric
-                  label="Sector"
-                  value={data.sector}
-                />
-
-
-                <CompanyMetric
-                  label="Industry"
-                  value={data.industry}
-                />
-
-
-                <CompanyMetric
-                  label="Country"
-                  value={data.country}
-                />
-
-
-                <CompanyMetric
-                  label="Employees"
-                  value={formatEmployees(
-                    data.employees,
-                  )}
-                />
-              </div>
+              <SentimentBar
+                label="Negative"
+                count={data.negative}
+                percentage={
+                  data.negativePercent
+                }
+                barColor="#ef4444"
+              />
             </div>
 
 
@@ -686,8 +818,6 @@ export default function AICompanySummary({
                 borderRadius: 14,
 
                 padding: 20,
-
-                marginBottom: 20,
               }}
             >
               <div
@@ -701,106 +831,55 @@ export default function AICompanySummary({
                   marginBottom: 12,
                 }}
               >
-                <Info
+                <AlertTriangle
                   size={19}
-                  color="#60a5fa"
+                  color="#f59e0b"
                 />
 
 
                 <h3
                   style={{
-                    color:
-                      "#f8fafc",
-
                     margin: 0,
+
+                    color: "#f8fafc",
 
                     fontSize: 17,
                   }}
                 >
-                  Business Overview
+                  Sentiment Interpretation
                 </h3>
               </div>
 
 
               <p
                 style={{
+                  margin: 0,
+
                   color: "#cbd5e1",
 
                   lineHeight: 1.8,
 
-                  margin: 0,
-
                   fontSize: 14,
                 }}
               >
-                {data.description}
+                {data.summary}
               </p>
             </div>
 
 
             <div
               style={{
-                display: "grid",
+                marginTop: 18,
 
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(260px, 1fr))",
+                padding: 14,
 
-                gap: 16,
-              }}
-            >
-              <AnalysisPanel
-                icon={
-                  <CheckCircle2
-                    size={20}
-                    color="#22c55e"
-                  />
-                }
-                title="Business Strengths"
-                items={strengths}
-                emptyText="No specific strengths are currently available."
-              />
-
-
-              <AnalysisPanel
-                icon={
-                  <TrendingUp
-                    size={20}
-                    color="#60a5fa"
-                  />
-                }
-                title="Growth Opportunities"
-                items={opportunities}
-                emptyText="No specific opportunities are currently available."
-              />
-
-
-              <AnalysisPanel
-                icon={
-                  <ShieldAlert
-                    size={20}
-                    color="#f59e0b"
-                  />
-                }
-                title="Risk Considerations"
-                items={risks}
-                emptyText="No specific risk information is currently available."
-              />
-            </div>
-
-
-            <div
-              style={{
-                marginTop: 20,
-
-                padding: 16,
+                borderRadius: 10,
 
                 background:
-                  "rgba(59, 130, 246, 0.08)",
+                  "rgba(59, 130, 246, 0.07)",
 
                 border:
-                  "1px solid rgba(59, 130, 246, 0.25)",
-
-                borderRadius: 12,
+                  "1px solid rgba(59, 130, 246, 0.2)",
               }}
             >
               <p
@@ -809,16 +888,17 @@ export default function AICompanySummary({
 
                   color: "#94a3b8",
 
-                  fontSize: 13,
+                  fontSize: 12,
 
                   lineHeight: 1.7,
                 }}
               >
-                This company summary is provided for
-                analytical research and informational
-                purposes. It should be considered together
-                with financial, technical, sentiment, and
-                risk analysis.
+                The sentiment score converts the backend normalized
+                range of -1 to +1 into a display range of 0 to 100.
+                A score near 50 represents broadly neutral sentiment.
+                News sentiment is one analytical factor and should not
+                be treated as a standalone stock price forecast or
+                investment recommendation.
               </p>
             </div>
           </>
@@ -828,27 +908,55 @@ export default function AICompanySummary({
 }
 
 
-type CompanyMetricProps = {
+type MetricCardProps = {
+  icon: React.ReactNode;
+
   label: string;
 
   value: string;
+
+  color: string;
 };
 
 
-function CompanyMetric({
+function MetricCard({
+  icon,
   label,
   value,
-}: CompanyMetricProps) {
+  color,
+}: MetricCardProps) {
   return (
-    <div>
+    <div
+      style={{
+        background: "#1e293b",
+
+        border:
+          "1px solid #334155",
+
+        borderRadius: 12,
+
+        padding: 18,
+      }}
+    >
+      <div
+        style={{
+          color,
+
+          marginBottom: 12,
+        }}
+      >
+        {icon}
+      </div>
+
+
       <p
         style={{
-          color: "#64748b",
-
-          fontSize: 12,
-
           margin:
-            "0 0 7px 0",
+            "0 0 8px 0",
+
+          color: "#94a3b8",
+
+          fontSize: 13,
         }}
       >
         {label}
@@ -857,9 +965,9 @@ function CompanyMetric({
 
       <strong
         style={{
-          color: "#e2e8f0",
+          color,
 
-          fontSize: 15,
+          fontSize: 24,
         }}
       >
         {value}
@@ -869,135 +977,99 @@ function CompanyMetric({
 }
 
 
-type AnalysisPanelProps = {
-  icon: React.ReactNode;
+type SentimentBarProps = {
+  label: string;
 
-  title: string;
+  count: number;
 
-  items: string[];
+  percentage: number;
 
-  emptyText: string;
+  barColor: string;
 };
 
 
-function AnalysisPanel({
-  icon,
-  title,
-  items,
-  emptyText,
-}: AnalysisPanelProps) {
+function SentimentBar({
+  label,
+  count,
+  percentage,
+  barColor,
+}: SentimentBarProps) {
   return (
     <div
       style={{
-        background: "#0f172a",
-
-        border:
-          "1px solid #1e293b",
-
-        borderRadius: 14,
-
-        padding: 20,
+        marginBottom: 16,
       }}
     >
       <div
         style={{
           display: "flex",
 
+          justifyContent:
+            "space-between",
+
           alignItems: "center",
 
-          gap: 10,
-
-          marginBottom: 16,
+          marginBottom: 7,
         }}
       >
-        {icon}
-
-
-        <h3
+        <span
           style={{
-            color: "#f8fafc",
+            color: "#cbd5e1",
 
-            fontSize: 16,
-
-            margin: 0,
+            fontSize: 13,
           }}
         >
-          {title}
-        </h3>
+          {label}
+        </span>
+
+
+        <span
+          style={{
+            color: "#94a3b8",
+
+            fontSize: 12,
+          }}
+        >
+          {count} (
+          {percentage.toFixed(1)}%)
+        </span>
       </div>
 
 
-      {items.length === 0 ? (
-        <p
-          style={{
-            color: "#64748b",
+      <div
+        style={{
+          height: 8,
 
-            fontSize: 13,
+          width: "100%",
 
-            lineHeight: 1.6,
+          background: "#1e293b",
 
-            margin: 0,
-          }}
-        >
-          {emptyText}
-        </p>
-      ) : (
+          borderRadius: 999,
+
+          overflow: "hidden",
+        }}
+      >
         <div
           style={{
-            display: "flex",
+            width: `${Math.min(
+              100,
+              Math.max(
+                0,
+                percentage,
+              ),
+            )}%`,
 
-            flexDirection: "column",
+            height: "100%",
 
-            gap: 12,
+            background: barColor,
+
+            borderRadius: 999,
+
+            transition:
+              "width 0.3s ease",
           }}
-        >
-          {items.map(
-            (
-              item,
-              index,
-            ) => (
-              <div
-                key={`${title}-${index}`}
-                style={{
-                  display: "flex",
-
-                  alignItems:
-                    "flex-start",
-
-                  gap: 9,
-                }}
-              >
-                <span
-                  style={{
-                    color:
-                      "#60a5fa",
-
-                    marginTop: 2,
-                  }}
-                >
-                  •
-                </span>
-
-
-                <p
-                  style={{
-                    color:
-                      "#cbd5e1",
-
-                    fontSize: 13,
-
-                    lineHeight: 1.6,
-
-                    margin: 0,
-                  }}
-                >
-                  {item}
-                </p>
-              </div>
-            ),
-          )}
-        </div>
-      )}
+        />
+      </div>
     </div>
   );
 }

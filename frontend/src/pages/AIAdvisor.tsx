@@ -83,6 +83,10 @@ export default function AIAdvisor() {
         gap: 24,
       }}
     >
+      {/* ======================================== */}
+      {/* PAGE HEADER */}
+      {/* ======================================== */}
+
       <div>
         <h1
           style={{
@@ -102,11 +106,14 @@ export default function AIAdvisor() {
             color: "#94a3b8",
 
             margin: 0,
+
+            lineHeight: 1.6,
           }}
         >
-          Explainable market analysis,
+          Ask questions first, then explore
+          explainable market analysis,
           portfolio intelligence, strategy
-          research and risk insights.
+          research, sentiment and risk insights.
         </p>
 
 
@@ -120,8 +127,7 @@ export default function AIAdvisor() {
 
             gap: 8,
 
-            padding:
-              "8px 12px",
+            padding: "8px 12px",
 
             background: "#111827",
 
@@ -142,30 +148,64 @@ export default function AIAdvisor() {
       </div>
 
 
+      {/* ======================================== */}
+      {/* AI INTRODUCTION */}
+      {/* ======================================== */}
+
       <AIWelcome />
 
+
+      {/* ======================================== */}
+      {/* AI CHAT - PRIMARY INTERACTION */}
+      {/* ======================================== */}
+
+      <AIChat symbol={symbol} />
+
+
+      {/* ======================================== */}
+      {/* STOCK ANALYSIS */}
+      {/* ======================================== */}
+
+      <AIStockAnalyzer
+      symbol={symbol}
+/>
+
+
+      {/* ======================================== */}
+      {/* MARKET BRIEF */}
+      {/* ======================================== */}
 
       <DailyMarketBrief />
 
 
-      <AIStockAnalyzer />
-
+      {/* ======================================== */}
+      {/* NEWS SENTIMENT */}
+      {/* ======================================== */}
 
       <NewsSentiment
         symbol={symbol}
       />
 
 
+      {/* ======================================== */}
+      {/* PORTFOLIO REVIEW */}
+      {/* ======================================== */}
+
       <AIPortfolioReview />
 
+
+      {/* ======================================== */}
+      {/* STRATEGY GENERATOR */}
+      {/* ======================================== */}
 
       <AIStrategyGenerator />
 
 
+      {/* ======================================== */}
+      {/* RISK ALERTS */}
+      {/* ======================================== */}
+
       <AIRiskAlerts />
-
-
-      <AIChat />
     </div>
   );
 }
